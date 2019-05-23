@@ -6,17 +6,10 @@
         {
             "type": "shell",
             "label": "build",
-            "command": "/usr/bin/g++",
-            "args": [
-                "-g",
-                "${file}",
-                "-o",
-                "${fileDirname}/${fileBasenameNoExtension}",
-                "-std=c++1z",
-                "-lpthread"
-            ],
+            "command": "/usr/bin/make",
+            "args": [],
             "options": {
-                "cwd": "/usr/bin"
+                "cwd": "${workspaceFolder}"
             },
             "problemMatcher": [
                 "$gcc"

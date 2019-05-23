@@ -1,1 +1,3 @@
 ipch/
+*.o
+start_up

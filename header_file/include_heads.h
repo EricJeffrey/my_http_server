@@ -10,7 +10,9 @@
 #include <unistd.h>
 #include <vector>
 
-using std::string, std::vector;
+using std::string, std::vector, std::pair;
+
+typedef const char *con_c_str;
 
 #define SVR_PORT 2500
 #define BACKLOG 20

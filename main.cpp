@@ -1,7 +1,6 @@
 #include "header_file/req_resp_header.h"
 #include "header_file/svr_mgr.h"
 
-// exit on error. err: error number, s: info, thread_exit: exit only this thread, sd: sd to close (only when thread_exit is false)
 int err_exit(int err, const char *s, bool thread_exit, int sd) {
     printf("error: %d! %s.\n", err, s);
     if (thread_exit) {

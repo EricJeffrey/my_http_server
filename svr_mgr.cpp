@@ -1,6 +1,7 @@
 #include "header_file/svr_mgr.h"
 
 void parse_headers(const char *buf, int len, my_req_header *header) {
+    printf("in parse_headers...\n");
     if (header == NULL)
         return;
 
@@ -20,7 +21,10 @@ void parse_headers(const char *buf, int len, my_req_header *header) {
             ++j;
             continue;
         }
-        j == 0 ? header->method.push_back(ch) : (j == 1 ? header->path.push_back(ch) : header->version.push_back(ch));
+        if (j == 0)
+            header->method.push_back(ch);
+        else
+            (j == 1 ? header->path.push_back(ch) : header->version.push_back(ch));
     }
 
     // parse keys and values
@@ -31,7 +35,7 @@ void parse_headers(const char *buf, int len, my_req_header *header) {
             i++, j++;
             k = 0;
             continue;
-        } else if (ch == ':') {
+        } else if (k == 0 && ch == ':') {
             k = 1;
             continue;
         }
@@ -44,18 +48,19 @@ void recv_msg() {}
 
 /*
 wrapper for send
-sd: socket, ver_co_phr: http/1.0 200 OK, vcp_len: len of ver_co_phr
-h_body: general header content, msg_body: data, m_body_len: size of data
+sd: socket, fir_line: http/1.0 200 OK, fir_line_len: len of fir_line
+gen_head: general header content, msg_body: data, m_body_len: size of data
 */
-int send_msg(int sd, con_c_str ver_co_phr, int vcp_len, vector<pss> *h_body, con_c_str msg_body, int mb_len) {
+int send_msg(int sd, con_c_str fir_line, int fir_line_len, vector<pss> *gen_head, con_c_str msg_body, int mb_len) {
+    printf("in send_msg...\n");
     int cont_len = 0;
     { // get content length
         // first line len
-        if (ver_co_phr != NULL)
-            cont_len += vcp_len + 2;
+        if (fir_line != NULL)
+            cont_len += fir_line_len + 2;
         // header len
-        if (h_body != NULL)
-            for (const pss ss : *h_body)
+        if (gen_head != NULL)
+            for (const pss ss : *gen_head)
                 // key: value\r\n
                 cont_len += ss.first.size() + ss.second.size() + 2 + 2;
         // body len
@@ -67,63 +72,40 @@ int send_msg(int sd, con_c_str ver_co_phr, int vcp_len, vector<pss> *h_body, con
     int t = 0;
 
     // first line
-    if ((t += sprintf(buf + t, "%s\r\n", ver_co_phr)) < 0)
-        err_exit(t, spr_fail, 1, -1);
+    if ((t += sprintf(buf + t, "%s\r\n", fir_line)) < 0)
+        err_exit(t, spr_fail, 1, sd);
 
     // header
-    if (h_body != NULL)
-        for (const pss ss : *h_body)
+    if (gen_head != NULL)
+        for (const pss ss : *gen_head)
             if ((t += sprintf(buf + t, "%s: %s\r\n", ss.first.c_str(), ss.second.c_str())) < 0)
-                err_exit(t, spr_fail, 1, -1);
+                err_exit(t, spr_fail, 1, sd);
 
     // msg body
     if ((t += sprintf(buf + t, "\r\n%s", msg_body)) < 0)
-        err_exit(t, spr_fail, 1, -1);
+        err_exit(t, spr_fail, 1, sd);
 
     // send and return
     if (send(sd, buf, cont_len - 1, 0) == -1)
         return -1;
 
     // free memory
-    free(buf);
+    // free(buf); // this will cause client cannot read data
+
+    printf("exiting send_msg.\n");
     return 0;
-}
-
-// handle client connectioin
-void *handle_conn(void *x) {
-    const int sd = *(int *)(x);
-    const int buf_sz = 4096;
-    char buf[buf_sz] = {};
-
-    // recv request
-    int err, len;
-    while (1) {
-        memset(buf, 0, buf_sz);
-        (err = recv(sd, buf, buf_sz, 0)) == -1 ? err_exit(err, "recv failed", 1, -1) : len = err;
-
-        // get header
-        my_req_header header;
-        parse_headers(buf, len, &header);
-        // header.print_me();
-
-        // get file from header.path
-        if (header.path == "/")
-            header.path = "/index.html";
-        string file_path = PAGE_DIR_PATH + header.path;
-        if (send_file(file_path, sd) == -1)
-            err_exit(-1, "send_file failed", 1, -1);
-    }
-    close(sd);
 }
 
 // read fpath content and send
 int send_file(string fpath, int sd) {
+    printf("in send_file...\n");
     // open file and check existence
     FILE *fp = fopen(fpath.c_str(), "r");
     if (fp == NULL) {
         // send 404 Message
-        const char vcp[] = "HTTP/1.1 404 Not Found";
-        if (send_msg(sd, vcp, sizeof(vcp), NULL, msg_body_404, sizeof(msg_body_404)) == -1)
+        const char fir_line[] = "HTTP/1.1 404 Not Found";
+        vector<pss> gen_head = {pss("Content-length", "23")};
+        if (send_msg(sd, fir_line, sizeof(fir_line), &gen_head, msg_body_404, sizeof(msg_body_404)) == -1)
             return -1;
         return 0;
     }
@@ -131,34 +113,97 @@ int send_file(string fpath, int sd) {
     // file size
     fseek(fp, 0L, SEEK_END);
     long f_sz = ftell(fp);
-    ferror(fp) ? err_exit(f_sz, "ftell failed", 1, -1) : 0;
     rewind(fp);
+    ferror(fp) ? err_exit(f_sz, "ftell failed", 1, sd) : 0;
 
     // construct msg header
-    vector<pss> h_head;
-    const char vcp[] = "HTTP/1.1 200 OK";
-    h_head.push_back(pss("Content-length", std::to_string(f_sz)));
-    bool first = 1;
+    const char fir_line[] = "HTTP/1.1 200 OK";
+    vector<pss> gen_head = {
+        pss("Content-length", std::to_string(f_sz)),
+        pss("Connection", "keep-alive"),
+    };
 
     // read file data and send
-    const int buf_sz = 2048;
+    const int buf_sz = 4095, buf_sz_hex_bytes = 3;
+    const int buf_data_sz = buf_sz - buf_sz_hex_bytes - 2 - 2;
+    int err = 0;
     char buf[buf_sz] = {};
 
-    // read data into buf
-    while (feof(fp) != EOF) {
-        int n = fread(buf, 1, buf_sz, fp), err = 0;
-        if (err = ferror(fp))
-            err_exit(err, "fread file failed", 1, -1);
-
-        // send it as msg body
-        if (n > 0) {
-            if (first && send_msg(sd, vcp, sizeof(vcp), &h_head, buf, n) == -1)
-                return -1;
-            else if (send(sd, buf, n, 0) == -1)
-                return -1;
+    // no need chunk
+    if (f_sz <= buf_sz) {
+        int n = fread(buf, 1, buf_sz, fp);
+        if ((err = ferror(fp)) == 0 && n >= 0) {
+            printf("n: %d\n", n);
+            err = send_msg(sd, fir_line, sizeof(fir_line), &gen_head, buf, n);
+            fclose(fp);
+            return err;
+        } else {
+            err_exit(err, "ferror or fread failed", 1, sd);
         }
     }
+
+    /* 
+    chunk need, format:
+    7\r\nMozilla\r\n =_= 9\r\nDeveloper\r\n =_= 7\r\nNetwork\r\n =_= 0\r\n\r\n
+    */
+    for (bool first = 1; feof(fp) != EOF; first = 0) {
+        memset(buf, 0, buf_sz);
+
+        // write buf length and \r\n
+        int n, t;
+        n = fread(buf + buf_sz_hex_bytes + 2, 1, buf_data_sz, fp);
+        if ((err = ferror(fp)) || n < 0)
+            err_exit(err, "fread file failed or n < 0", 1, sd);
+        char *buf_d = buf;
+        buf_d += (n >= 0x100 ? 0 : n >= 0x10 ? 1 : 2);
+        t = sprintf(buf_d, "%x\r\n", n);
+
+        // write end \r\n
+        *(buf_d + buf_sz_hex_bytes + 2 + n) = '\r';
+        *(buf_d + buf_sz_hex_bytes + 2 + n + 1) = '\n';
+
+        // send it as msg body
+        if (first)
+            err = send_msg(sd, fir_line, sizeof(fir_line), &gen_head, buf_d, n);
+        else
+            err = send(sd, buf_d, n, 0);
+        if (err == -1)
+            return -1;
+    }
+    sprintf(buf, "0\r\n\r\n");
+    if (send(sd, buf, 4, 0) == -1)
+        return -1;
     return 0;
+}
+
+// handle client connectioin
+void *handle_conn(void *x) {
+    printf("in handle_conn...\n");
+    const int sd = *(int *)(x);
+    const int buf_sz = 1024;
+    char buf[buf_sz] = {};
+
+    // recv request
+    int ret, len;
+    while (1) {
+        memset(buf, 0, buf_sz);
+        ret = recv(sd, buf, buf_sz, 0);
+        ret == -1 ? err_exit(ret, "recv failed", 1, sd) : len = ret;
+        printf("request received, parsing header...\n");
+
+        // get header
+        my_req_header header;
+        parse_headers(buf, len, &header);
+        header.print_me();
+
+        // get file from header.path
+        if (header.path == "/")
+            header.path = "/index.html";
+        string file_path = PAGE_DIR_PATH + header.path;
+        if (send_file(file_path, sd) == -1)
+            err_exit(-1, "send_file failed", 1, sd);
+    }
+    close(sd);
 }
 
 // server listen
@@ -193,7 +238,8 @@ void start_listen() {
         printf("socket descriptor: %d, connection established, now begin handle.\n", acc_sd);
         pthread_t sub_thr;
         // handle this conn
-        (err = pthread_create(&sub_thr, NULL, handle_conn, (void *)&acc_sd)) != 0 ? err_exit(err, "create sub thread failed", 0, sd) : 0;
+        err = pthread_create(&sub_thr, NULL, handle_conn, (void *)&acc_sd);
+        err != 0 ? err_exit(err, "create sub thread failed", 0, sd) : 0;
     }
     close(sd);
 }

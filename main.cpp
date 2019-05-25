@@ -3,13 +3,8 @@
 
 int err_exit(int err, const char *s, bool thread_exit, int sd) {
     printf("error: %d! %s.\n", err, s);
-    if (thread_exit) {
-        pthread_exit(0);
-    } else {
-        if (sd != -1)
-            close(sd);
-        exit(0);
-    }
+    sd != -1 ? close(sd) : 0;
+    thread_exit ? pthread_exit(0) : exit(0);
 }
 
 int main(int argc, char const *argv[]) {

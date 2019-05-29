@@ -46,11 +46,6 @@ void parse_headers(const char *buf, int len, my_req_header *header) {
 // wrapper for recv
 void recv_msg() {}
 
-/*
-wrapper for send
-sd: socket, fir_line: http/1.0 200 OK, fir_line_len: len of fir_line
-gen_head: general header content, msg_body: data, m_body_len: size of data
-*/
 int send_msg(int sd, con_c_str fir_line, int fir_line_len, vector<pss> *gen_head, con_c_str msg_body, int mb_len) {
     printf("in send_msg...\n");
     int cont_len = 0;
@@ -98,7 +93,7 @@ int send_msg(int sd, con_c_str fir_line, int fir_line_len, vector<pss> *gen_head
 
 // read fpath content and send
 int send_file(string fpath, int sd) {
-    printf("in send_file...\n");
+    printf("in send_file... fpath: %s, sd: %d\n", fpath.c_str(), sd);
     // open file and check existence
     FILE *fp = fopen(fpath.c_str(), "r");
     if (fp == NULL) {
@@ -142,7 +137,7 @@ int send_file(string fpath, int sd) {
         }
     }
 
-    /* 
+    /*
     chunk need, format:
     7\r\nMozilla\r\n =_= 9\r\nDeveloper\r\n =_= 7\r\nNetwork\r\n =_= 0\r\n\r\n
     */
@@ -185,7 +180,7 @@ void *handle_conn(void *x) {
 
     // recv request
     int ret, len;
-    while (1) {
+    for (int i = 0; i < 15; i++) {
         memset(buf, 0, buf_sz);
         ret = recv(sd, buf, buf_sz, 0);
         ret == -1 ? err_exit(ret, "recv failed", 1, sd) : len = ret;
@@ -194,7 +189,7 @@ void *handle_conn(void *x) {
         // get header
         my_req_header header;
         parse_headers(buf, len, &header);
-        header.print_me();
+        // header.print_me();
 
         // get file from header.path
         if (header.path == "/")
@@ -235,7 +230,7 @@ void start_listen() {
             break;
 
         (err = accept(sd, NULL, NULL)) == -1 ? err_exit(acc_sd, "accept failed", 0, sd) : acc_sd = err;
-        printf("socket descriptor: %d, connection established, now begin handle.\n", acc_sd);
+        // printf("socket descriptor: %d, connection established, now begin handle.\n", acc_sd);
         pthread_t sub_thr;
         // handle this conn
         err = pthread_create(&sub_thr, NULL, handle_conn, (void *)&acc_sd);

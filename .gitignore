@@ -1,4 +1,6 @@
-ipch/
 *.o
+.out
+build/
 start_up
 pages/
+.vscode/

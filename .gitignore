@@ -1,7 +1,7 @@
 *.o
 *.out
-.sh
-.log
+*.sh
+*.log
 
 start_up
 

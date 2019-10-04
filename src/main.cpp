@@ -7,46 +7,26 @@
 #include "wrappers.h"
 
 #include <arpa/inet.h>
-#include <errno.h>
 #include <netdb.h>
-#include <sys/fcntl.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
-#include <unistd.h>
 
-int num_tot_thread = 6;
+int num_tot_thread = 4;
+int back_log = 20;
+unsigned int port = 2333;
+int time_out_epoll = 100;
+int max_events_epoll = 10;
 
 int openListenfd(int port, int back_log);
 void startEpollWait(int epfd, int sd, int time_out_epoll, int max_events_epoll);
 int acceptClient(int epfd, int sd);
 void handleRequest(int fd);
-
-// 测试线程池是否能正常工作
-void work() {
-    runnable runner = [](void *arg) {
-        int t = *(int *)arg;
-        fprintf(stderr, "run now, sleep %d seconds...\n", t);
-        sleep(t);
-        fprintf(stderr, "run over...\n");
-    };
-    thread_pool &pool = thread_pool::getInstance(3);
-    int sleeptimes[] = {3, 2, 2, 4, 1, 3, 2, 4, 1, 2, 2, 3, 2, 4, 1, 2};
-    for (int i = 0; i < 16; i++) {
-        int *t = (int *)malloc(sizeof(int));
-        *t = sleeptimes[i];
-        pool.pushTask(task(runner, t));
-    }
-    getchar();
-    exit(0);
-}
+void handleResponse(int fd);
+void init();
 
 int main(int argc, char const *argv[]) {
-    LOGGER_SET_LV(LOG_LV_DEBUG);
-    thread_pool::getInstance(num_tot_thread);
-    // work();
+    init();
 
-    const int back_log = 20;
-    const unsigned int port = 2333;
     int sd = openListenfd(port, back_log);
 
     int epfd = Epoll_create(1);
@@ -54,11 +34,19 @@ int main(int argc, char const *argv[]) {
 
     LOGGER_SIMP(LOG_LV_DEBUG, "starting epoll wait");
 
-    const int time_out_epoll = 2000;
-    const int max_events_epoll = 10;
     startEpollWait(epfd, sd, time_out_epoll, max_events_epoll);
 
     return 0;
+}
+
+// 初始化配置信息
+void init() {
+    freopen("server.log", "w", stderr);
+    setbuf(stderr, NULL);
+    LOGGER_SIMP(LOG_LV_DEBUG, "init");
+
+    LOGGER_SET_LV(LOG_LV_VERBOSE);
+    thread_pool::getInstance(num_tot_thread);
 }
 
 // 打开监听端口，返回套接字描述符
@@ -87,30 +75,35 @@ int acceptClient(int epfd, int sd) {
     sockaddr_in tmpaddr;
     socklen_t len = sizeof(tmpaddr);
     tmpfd = Accept(sd, (sockaddr *)&tmpaddr, &len);
+    Epoll_add(epfd, tmpfd, EPOLLIN);
+    // Fcntl_NBlock(tmpfd);
     return tmpfd;
 }
 
 // 处理客户端的HTTP请求
 void handleRequest(int fd) {
+    LOGGER_SIMP(LOG_LV_VERBOSE, "handleRequest");
     // 提交任务到线程池 TODO
-    struct task_arg {
-        int fd;
-    };
-
-    runnable runner = [](void *arg) {
-        task_arg targ = *(task_arg *)arg;
+    runnable runner = [](task_arg arg) {
+        int fd = arg.fd;
+        LOGGER_FORMAT(LOG_LV_VERBOSE, "runner fd = %d: start", fd);
         const int buf_size = 1024;
         char buf[buf_size];
-        int n = read(targ.fd, buf, buf_size);
+        int n = read(fd, buf, buf_size);
+        LOGGER_FORMAT(LOG_LV_VERBOSE, "runner fd = %d: read over", fd);
+        LOGGER_FORMAT(LOG_LV_DEBUG, "runner fd = %d: read data: %s", fd, buf);
+
         char bufout[buf_size << 1] = {};
-        int len = strlen(buf) + 51;
-        n = snprintf(bufout, buf_size << 1, "HTTP1.0 %d OK\r\ncontent-language: en-US\r\ncontent-type: text/html; charset=utf-8\r\ncontent-length: %d\r\n\r\n%s\n<strong style=\"font-size:72px;\">\nHello World!<strong>", 200, len, buf);
-        n = write(targ.fd, bufout, n);
-        Close(targ.fd);
+        int len = strlen(buf) + 61;
+        n = snprintf(bufout, buf_size << 1, "HTTP1.0 %d OK\r\ncontent-language: en-US\r\ncontent-type: text/html; charset=utf-8\r\ncontent-length: %d\r\n\r\n%s\n<strong style=\"font-size:72px;\"><br/>Hello World!<br/><strong>", 200, len, buf);
+        n = write(fd, bufout, n);
+        LOGGER_FORMAT(LOG_LV_VERBOSE, "runner fd = %d: write over", fd);
+
+        // Close(fd);
     };
-    task_arg *targ = (task_arg *)malloc(sizeof(task_arg));
-    targ->fd = fd;
-    thread_pool::getInstance(num_tot_thread).pushTask(task(runner, (void *)targ));
+
+    thread_pool::getInstance(num_tot_thread).pushTask(task(runner, task_arg(fd)));
+    LOGGER_FORMAT(LOG_LV_DEBUG, "task pushed into thread pool, task fd: %d", fd);
 }
 
 // 开始监听文件描述符上的事件
@@ -121,31 +114,39 @@ void startEpollWait(int epfd, int sd, int time_out_epoll, int max_events_epoll) 
         int num_ready = 0;
         struct epoll_event evlist[max_events_epoll];
         num_ready = Epoll_wait(epfd, evlist, max_events_epoll, time_out_epoll);
+        LOGGER_FORMAT(LOG_LV_DEBUG, "epoll_wait return, ready clients num: %d", num_ready);
 
         for (int i = 0; i < num_ready; i++) {
-            LOGGER_FORMAT(LOG_LV_DEBUG, "fd=%d; events: %s%s%s", evlist[i].data.fd, (evlist[i].events & EPOLLIN) ? "EPOLLIN " : "", (evlist[i].events & EPOLLHUP) ? "EPOLLHUP " : "", (evlist[i].events & EPOLLERR) ? "EPOLLERR " : "");
+            LOGGER_FORMAT(LOG_LV_DEBUG, "fd=%d; events: %s%s%s%s, event_value: %d", evlist[i].data.fd,
+                          (evlist[i].events & EPOLLIN) ? "EPOLLIN " : "",
+                          (evlist[i].events & EPOLLHUP) ? "EPOLLHUP " : "",
+                          (evlist[i].events & EPOLLOUT) ? "EPOLLOUT " : "",
+                          (evlist[i].events & EPOLLERR) ? "EPOLLERR " : "",
+                          evlist[i].events);
 
             epoll_event tmpev = evlist[i];
 
             if (tmpev.events & (EPOLLRDHUP | EPOLLHUP)) { // 流套接字对端关闭连接
                 Close(tmpev.data.fd);
+                Epoll_del(epfd, tmpev.data.fd, EPOLLIN);
+                LOGGER_FORMAT(LOG_LV_DEBUG, "epoll: RD HUP, fd = %d deleted", tmpev.data.fd);
             } else if (tmpev.events & EPOLLIN) { // 客户端连接或数据读取
-                // 客户端建立连接
-                if (tmpev.data.fd == sd) {
+                if (tmpev.data.fd == sd) {       // 客户端建立连接
                     LOGGER_SIMP(LOG_LV_DEBUG, "epoll: new client");
-                    handleRequest(acceptClient(epfd, sd));
-                }
-                // 客户端数据传输请求
-                else {
+                    acceptClient(epfd, sd);
+                } else { // 客户端数据传输请求
                     LOGGER_SIMP(LOG_LV_DEBUG, "epoll: new data");
                     handleRequest(tmpev.data.fd);
                 }
+            } else if (tmpev.events & EPOLLOUT) {
+                LOGGER_SIMP(LOG_LV_DEBUG, "epoll: data ready out");
             } else if (tmpev.events & EPOLLERR) { //错误
                 LOGGER_SIMP(LOG_LV_DEBUG, "epoll_wait error!");
                 errExitSimp("epoll failed");
             }
         }
         // 睡一会，方便Debug
-        LOGGER_FORMAT(LOG_LV_DEBUG, "sleep for 3 seconds, %d seconds left.", sleep(1));
+        useconds_t tmptime = 200;
+        LOGGER_FORMAT(LOG_LV_DEBUG, "sleep for %d seconds, %d seconds left.", tmptime, usleep(tmptime));
     }
 }

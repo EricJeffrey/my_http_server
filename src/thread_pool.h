@@ -16,20 +16,26 @@ using std::thread;
 using std::unique_lock;
 using std::vector;
 
-typedef void (*runnable)(void *arg);
+// 线程池任务参数
+struct task_arg {
+    int fd;
+    task_arg() : fd(0) {}
+    task_arg(int f) : fd(f) {}
+};
 
+typedef void (*runnable)(task_arg arg);
 // 线程池中待执行任务
 struct task {
     runnable runner;
-    void *arg;
+    task_arg arg;
 
-    task(runnable r, void *a) {
+    task(runnable r, task_arg a) {
         runner = r;
         arg = a;
     }
     void run() {
+        LOGGER_FORMAT(LOG_LV_VERBOSE, "task: run now, arg fd: %d", arg.fd);
         runner(arg);
-        free(arg);
     }
 };
 
@@ -39,7 +45,6 @@ private:
     const int thread_num;
     vector<thread> threads;
     condition_variable condq;
-    mutex mutex_ava;
 
     queue<task> qtasks;
     mutex mutexq;
@@ -48,7 +53,13 @@ private:
         for (int i = 0; i < thread_num; i++) {
             threads.push_back(thread([this]() {
                 while (1) {
-                    task tmptask = this->frontTask();
+                    unique_lock<mutex> lck(mutexq);
+                    while (qtasks.empty())
+                        condq.wait(lck);
+                    task tmptask = qtasks.front();
+                    lck.unlock();
+                    lck.release();
+                    LOGGER_SIMP(LOG_LV_DEBUG, "thread: task got, lck unlocked, running...");
                     tmptask.run();
                 }
             }));
@@ -63,16 +74,6 @@ public:
         qtasks.push(t);
         mutexq.unlock();
         condq.notify_one();
-    }
-    // 获取任务
-    task frontTask() {
-        LOGGER_SIMP(LOG_LV_VERBOSE, "thread pool: front task");
-        unique_lock<mutex> lck(mutexq);
-        while (qtasks.empty())
-            condq.wait(lck);
-        task tmptask = qtasks.front();
-        qtasks.pop();
-        return tmptask;
     }
 
     thread_pool(thread_pool &) = delete;

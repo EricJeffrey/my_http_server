@@ -1,5 +1,6 @@
 #include "err_handler.h"
 #include "logger.h"
+#include <fcntl.h>
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -41,6 +42,10 @@ int Accept(int sd, sockaddr *addr, socklen_t *len) {
         errExitSimp("accept failed");
     return ret_wrapper;
 }
+int Fcntl_NBlock(int fd) {
+    if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
+        errExitSimp("fcntl nonblock failed");
+}
 
 // epoll api
 int Epoll_create(int sz) {
@@ -53,7 +58,7 @@ int Epoll_create(int sz) {
 int Epoll_ctl(int epfd, int op, int fd, epoll_event *events) {
     LOGGER_SIMP(LOG_LV_VERBOSE, "Wrapper: epoll_ctl");
     ret_wrapper = epoll_ctl(epfd, op, fd, events);
-    if (ret_wrapper)
+    if (ret_wrapper == -1)
         errExitSimp("epoll ctl failed");
     return ret_wrapper;
 }

@@ -19,19 +19,19 @@ FILE *FP_LOG_OUTPUT = stderr;
             LOG_LEVEL = x;                            \
     } while (0)
 
-#define LOGGER_SIMP(level, str)                                             \
-    do {                                                                    \
-        if (level <= LOG_LEVEL && level > 0)                                \
-            fprintf(FP_LOG_OUTPUT, "LOG %s: %s\n", LOG_LV_STR[level], str); \
+#define LOGGER_SIMP(level, str)                                                                                   \
+    do {                                                                                                          \
+        if (level <= LOG_LEVEL && level > 0)                                                                      \
+            fprintf(FP_LOG_OUTPUT, "LOG %s:--- %s --- LOG %s OVER\n", LOG_LV_STR[level], str, LOG_LV_STR[level]); \
     } while (0)
 
-#define LOGGER_FORMAT(level, format, ...)                                  \
-    do {                                                                   \
-        if (level <= LOG_LEVEL && level > 0) {                             \
-            fprintf(FP_LOG_OUTPUT, "LOG %s:---", LOG_LV_STR[level]);       \
-            fprintf(FP_LOG_OUTPUT, format, __VA_ARGS__);                   \
-            fprintf(FP_LOG_OUTPUT, "LOG %s OVER---\n", LOG_LV_STR[level]); \
-        }                                                                  \
+#define LOGGER_FORMAT(level, format, ...)                                       \
+    do {                                                                        \
+        if (level <= LOG_LEVEL && level > 0) {                                  \
+            fprintf(FP_LOG_OUTPUT, "LOG %s:--- ", LOG_LV_STR[level]);           \
+            fprintf(FP_LOG_OUTPUT, format, __VA_ARGS__);                        \
+            fprintf(FP_LOG_OUTPUT, ". ---LOG %s OVER\n", LOG_LV_STR[level]); \
+        }                                                                       \
     } while (0)
 
 #endif // LOGGER_H

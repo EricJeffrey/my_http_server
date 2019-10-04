@@ -10,7 +10,9 @@
 #include <unistd.h>
 #include <vector>
 
-using std::string, std::vector, std::pair;
+using std::pair;
+using std::string;
+using std::vector;
 
 typedef const char *con_c_str;
 

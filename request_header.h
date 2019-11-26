@@ -6,7 +6,9 @@
 #include <vector>
 
 using std::map;
+using std::pair;
 using std::vector;
+typedef pair<string, string> PAIR_SS;
 
 class request_header {
 public:
@@ -14,6 +16,7 @@ public:
     string method;
     string url;
     map<string, string> mp_gene_req_headers;
+    vector<PAIR_SS> list_pair_headers;
 
     request_header() {}
     ~request_header() {}
@@ -56,6 +59,7 @@ public:
             pos_end += 1;
             string val = line_tmp.substr(pos_end, line_tmp.size() - pos_end);
             header.mp_gene_req_headers[key] = val;
+            header.list_pair_headers.push_back(PAIR_SS(key, val));
         }
         return 0;
     }

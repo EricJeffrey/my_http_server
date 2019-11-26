@@ -1,13 +1,15 @@
 *.o
 *.out
-*.sh
 *.log
 
 start_up
 
+tmp/
 build/
 pages/
 .vscode/
 
 foo.txt
 bar.txt
+
+

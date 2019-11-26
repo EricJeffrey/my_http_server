@@ -62,12 +62,14 @@ public:
     static void fail(initializer_list<string> msg_list, bool show_erron = false) {
         int errno_tmp = errno;
         string err_msg = string(strerror(errno_tmp));
+
         stringstream ss;
+        preInfo(ss);
+        ss << "ERROR\t";
+        if (show_erron && errno_tmp != 0)
+            ss << "errno: " << errno_tmp << ", " << err_msg << '.';
         msgInfo(ss, msg_list);
-        cerr << "failed with errno: " << errno_tmp << ", " << ss.str() << ". ";
-        if (errno_tmp != 0)
-            ss << err_msg;
-        ss << endl;
+        cerr << ss.str() << '.' << endl;
     }
     // to [stderr]
     static void debug(initializer_list<string> msg_list) {

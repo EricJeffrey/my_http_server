@@ -7,7 +7,6 @@
 
 class main_listener {
 private:
-
     // -1 when error
     int openListenFd(int port, int backlog) {
         addrinfo hints, *listp, *p;
@@ -58,8 +57,9 @@ public:
             sockaddr_in addr_tmp;
             socklen_t len_addr_tmp = sizeof(addr_tmp);
             int sd_conn = accept(sd_listen, (sockaddr *)&addr_tmp, &len_addr_tmp);
-            if (sd_conn == -1) logger::fail({__func__, "accept failed"}, true);
-            logger::info({"connection from: ", inet_ntoa(addr_tmp.sin_addr), " established"});
+            if (sd_conn == -1)
+                logger::fail({__func__, "accept failed"}, true);
+            logger::info({"connection from: ", inet_ntoa(addr_tmp.sin_addr), " established with socket: ", to_string(sd_conn)});
             list_threads.push_back(thread(&conn_handler::start, conn_handler(sd_conn, addr_tmp, len_addr_tmp)));
         }
     }

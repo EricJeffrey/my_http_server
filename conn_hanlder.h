@@ -138,7 +138,6 @@ private:
         return -1;
     }
     // add headers to environ -> fork -> duplicate socket_fd to stdout -> exec
-    // todo return valid http response
     int serveCgi(string path_url, const request_header &header) {
         logger::info({"start serve cgi with url: ", path_url});
         int ret = 0;
@@ -165,8 +164,6 @@ private:
         const char *name_tmp = config::path_file_cgi_process.substr(pos_name).c_str();
         char *name = strdup(name_tmp);
         char *argv[2] = {name, nullptr};
-        // todo no need fork???
-        logger::debug({"start dup2"});
         ret = dup2(sd, STDOUT_FILENO);
         if (ret == -1) {
             logger::fail({__func__, " dup2 failed"}, true);
@@ -196,7 +193,7 @@ private:
             return -1;
         }
     }
-    // todo serve 404 500...
+    // todo serve different code: 404 500...
     int serveError(int status_code) {
         logger::info({"start serve error file, status_code: ", to_string(status_code)});
         int ret = 0;
@@ -276,7 +273,6 @@ private:
         }
         string path;
         logger::verbose({"parse request url"});
-        logger::debug({"request url: ", header.url});
         pathParser(header.url, path);
         const int sz_path_tmp = path.size();
         if (sz_path_tmp > 0 && path.find(config::path_url_static) == 0) {
@@ -297,19 +293,6 @@ private:
             }
         } else {
             serveError(response_header::CODE_NOT_FOUND);
-        }
-
-        { // temp response
-            // auto sendResp = [this]() -> void {
-            //     std::stringstream ss;
-            //     ss << "HTTP/1.1 200 OK\r\n"
-            //        << "content-length:" << 5 << "\r\n\r\n"
-            //        << "hello";
-            //     string rep = ss.str();
-            //     write(sd, rep.c_str(), rep.length());
-            // };
-            // sendResp();
-            // close(sd);
         }
         return 0;
     }

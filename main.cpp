@@ -23,6 +23,7 @@ void init() {
         config::path_url_error = "static/error.html";
 
         config::path_dir_static_root = "./static/";
+        config::path_dir_cgi_root = "./cgi/";
         config::path_file_cgi_process = "./cgi/main_cgi";
 
         config::debug = false;

@@ -8,33 +8,43 @@
 - CGI程序url
 - CGI程序管理器路径
 
-## bug tracker
-- 如下日志中，返回404之后的 `readLinefillbuffer return 0`错误
-  ```
-  11628 log       server started, listening on port 8686
-  11628 log       connection from: 192.168.199.1 established
-  11628 log       connection from: 192.168.199.1 established
-  11630 log       handling new conn from: 192.168.199.1
-  11630 log       reading request from socket: 5
-  11630 log       start serve static file with url: static/abc
-  failed with errno: 2, operator() stat file failed No such file or directory.
-  failed with errno: 2, serveStatic ./static/abc doesnot exist No such file or directory.
-  failed with errno: 2, handleNewConn serve static file failed No such file or directory.
-  11630 log       start serve error file, status_code: 500
-  11629 log       handling new conn from: 192.168.199.1
-  11629 log       reading request from socket: 4
-  failed with errno: 0, readLinefillbuffer return 0.
-  failed with errno: 0, readRequestHeaderreader.readline return 0.
-  failed with errno: 0, handleNewConnreadRequestHeader failed.
-  11629 log       start serve error file, status_code: 500
-  11628 log       connection from: 192.168.199.1 established
-  11628 log       connection from: 192.168.199.1 established
-  11632 log       handling new conn from: 192.168.199.1
-  11632 log       reading request from socket: 4
-  11632 log       start serve static file with url: static/halo
-  failed with errno: 0, serveStatic./static/halo not a regular file.
-  11632 log       start serve error file, status_code: 404
-  11631 log       handling new conn from: 192.168.199.1
-  11631 log       reading request from socket: 6
-  ```
-- 
+## 目标
+- 配置目录映射
+- 配置自定义404页面
+- 使用Python脚本编写RestCGI程序
+  - 映射指定Python模块的url
+
+## 设计记录
+
+1. 处理连接流程
+   ```txt
+   开始 -- 读取请求首部 -- 解析请求方法、路径与参数 --GET-- 确定路径类型 --文件-- 响应文件 -- 结束
+                                                |                   |
+                                                |                   --CGI--- 启动CGI程序 -- 读取输出字符串 -- 封装响应内容 -- 结束
+                                                |                   |
+                                                |                   --其它--  响应404 -- 结束
+                                                |
+                                                --POST-- 确定路径类型 --文件-- 响应405不运行 -- 结束
+                                                                    |
+                                                                     --CGI--- 读取请求体 -- 启动CGI程序 -- 读取输出字符串 -- 封装相应内容 -- 结束
+                                                                    |
+                                                                     --其它-- 响应404 -- 结束
+   ```
+
+## bug记录
+
+## 待办Todo
+近期需要处理的任务
+
+- 配置信息的重新设计 - cgi程序目录 + 静态文件映射（多个）
+- 单元测试
+- 解析GET/POST参数
+- 实现持久性连接，keep-alive & timeout
+  > 只需在发送一个请求后不关闭socket即可，客户端会pipeline请求
+- 计时器Timer
+  > 每个连接都在线程内，不断地从连接读取输入并判断是否超时即可
+- 从文件读取配置信息
+- CGI程序管理器
+  - 将程序 输出封装为响应response
+- 文件encode类型 gzip deflate
+  > gzip压缩后传输

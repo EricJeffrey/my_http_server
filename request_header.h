@@ -36,25 +36,30 @@ public:
             logger::fail({__func__, "failed, line_headers.size = 0"});
             return -1;
         };
-
         string req_line = line_headers[0];
-        int pos_start = 0;
-        int pos_end = 0;
+        size_t pos_start = 0;
+        size_t pos_end = 0;
         const char space = ' ';
+        // method
         pos_end = req_line.find(space, pos_start);
+        if (pos_end == string::npos) return -1;
         header.method = req_line.substr(pos_start, pos_end - pos_start);
+        // url
         pos_start = pos_end + 1;
         pos_end = req_line.find(space, pos_start);
+        if (pos_end == string::npos) return -1;
         header.url = req_line.substr(pos_start, pos_end - pos_start);
+        // version
         pos_start = pos_end + 1;
         pos_end = req_line.find(space, pos_start);
+        if (pos_end == string::npos) return -1;
         header.version = req_line.substr(pos_start, pos_end - pos_start);
-        logger::debug({"head.url: ", header.url, " header.method: ", header.method});
+
         const char colon = ':';
         for (size_t i = 1; i < line_headers.size(); i++) {
             string line_tmp = line_headers[i];
             pos_end = line_tmp.find(colon);
-
+            if (pos_end == string::npos) return -1;
             string key = line_tmp.substr(0, pos_end);
             pos_end += 1;
             string val = line_tmp.substr(pos_end, line_tmp.size() - pos_end);

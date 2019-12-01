@@ -36,8 +36,8 @@ public:
         if (st_path == ed_path) return -1;
         // root + relative_path
         path += url.substr(st_path, ed_path - st_path);
-        // no ? found in url
-        if (pos_of_question_sign == npos) return 0;
+        // '?' is the last or no ? found in url
+        if (pos_of_question_sign == npos || pos_of_question_sign == sz_url - 1) return 0;
         size_t st_para = pos_of_question_sign + 1;
         while (true) {
             size_t pos_and_sign = url.find_first_of('&', st_para);

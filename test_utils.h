@@ -8,10 +8,32 @@ using std::endl;
 using std::vector;
 
 void test_parse_url() {
-    vector<string> url_list = {"", "cgi", "/stait", "/static", "/static/", "/cg", "/cgi/",
-                               "/static/a", "/static/?", "/static/?wd=sdf", "/static/bcde",
-                               "/static/cd?", "/static/cd?a", "/static/cd?bcdefgh&sd",
-                               "/static/cd?wd=2&sd", "/static/cd?wd&sd=sdg"};
+    vector<string> url_list = {
+        "",
+        "cgi",
+        "/stait",
+        "/static",
+        "/hello",
+        "/static/",
+        "/cg",
+        "/fil",
+        "/cgi/",
+        "/static/a",
+        "/static/?",
+        "/static/?wd=sdf",
+        "/static/bcde",
+        "/static/cd?",
+        "/static/cd?a",
+        "/static/cd?bcdefgh&sd",
+        "/static/cd?wd=2&sd",
+        "/static/cd?wd&sd=sdg",
+        "/tak",
+        "ta",
+        "/tak?a=2",
+        "/take?a=2&b=3",
+        "/take?a&b",
+        "/find?&b",
+        "/find?a&cx=34"};
     int i = 0;
     for (auto &&url_tmp : url_list) {
         cout << i++ << '\t';

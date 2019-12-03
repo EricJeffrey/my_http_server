@@ -36,7 +36,7 @@ public:
             logger::fail({__func__, "failed, line_headers.size = 0"});
             return -1;
         };
-        string req_line = line_headers[0];
+        const string req_line = line_headers[0];
         size_t pos_start = 0;
         size_t pos_end = 0;
         const char space = ' ';
@@ -51,9 +51,7 @@ public:
         header.url = req_line.substr(pos_start, pos_end - pos_start);
         // version
         pos_start = pos_end + 1;
-        pos_end = req_line.find(space, pos_start);
-        if (pos_end == string::npos) return -1;
-        header.version = req_line.substr(pos_start, pos_end - pos_start);
+        header.version = req_line.substr(pos_start);
 
         const char colon = ':';
         for (size_t i = 1; i < line_headers.size(); i++) {

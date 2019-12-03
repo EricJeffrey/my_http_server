@@ -62,7 +62,7 @@ public:
     }
     ~buffered_reader() {}
 
-    // save '\r\n' return [length], -1 for error. !! [line] will be cleared!
+    // save '\r\n', return [length], -1 for error. !! [line] will be cleared!
     int readLine(string &line) {
         line.clear();
         stringstream ss;

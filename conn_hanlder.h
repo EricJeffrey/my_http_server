@@ -48,7 +48,7 @@ private:
         }
     }
     // write [str_header] [fd_file] to client, using [write2client] and [sendfile]
-    // do not close [sd] [fd_file]
+    // won't close [sd] [fd_file]
     int writeFBundle2client(const string &str_header, const int sz_file, const int fd_file) {
         logger::verbose({"start write file bundles to client"});
         int ret = write2client(str_header);
@@ -60,6 +60,7 @@ private:
         }
         return 0;
     }
+    // todo different file type
     // give filepath, create [header], [file_size] and **opened** [fd_file]
     // -1 for error, and fd_file is not specified
     int createFileBundle(string path_abs, string &str_header, int &sz_file, int &fd_file, int status_code = 200) {
@@ -87,13 +88,11 @@ private:
         return 0;
     }
     // path_url has 'static/', -1 for internal error, 0 for success, 1 for 404
-    int serveStatic(string path_url) {
-        logger::info({"start serve static file with url: ", path_url});
+    int serveStatic(string path_abs) {
+        logger::info({"start serve static file: ", path_abs});
 
         int ret = 0;
         // generate header
-        int sz_tmp = config::path_url_static.size();
-        string path_abs = config::path_dir_static_root + path_url.substr(sz_tmp, path_url.size() - sz_tmp);
         // path is a regular file or not, -1 error, 0 not, 1 ok
         auto isRegFile = [](const char *path) -> int {
             struct stat path_info;
@@ -108,7 +107,7 @@ private:
         ret = isRegFile(path_abs.c_str());
         if (ret == -1) { // no such file
             logger::info({path_abs, " doesnot exist"});
-            return -1;
+            return 1;
         } else if (ret == 0) { // not a regular file
             logger::info({path_abs, " not a regular file"});
             return 1;
@@ -138,8 +137,9 @@ private:
         return -1;
     }
     // add headers to environ -> fork -> duplicate socket_fd to stdout -> exec
-    int serveCgi(string path_url, const request_header &header) {
-        logger::info({"start serve cgi with url: ", path_url});
+    int serveCgi(string path_abs, const request_header &header, const vector<string> list_paras) {
+        // todo serve cgi
+        logger::info({"start serve cgi prog: ", path_abs});
         int ret = 0;
         // prepare environ
         auto list_pair_headers = header.list_pair_headers;
@@ -193,7 +193,8 @@ private:
             return -1;
         }
     }
-    // todo serve different code: 404 500...
+    // todo serve different code: 403 404 500 502...
+    // todo custom error file page
     int serveError(int status_code) {
         logger::info({"start serve error file, status_code: ", to_string(status_code)});
         int ret = 0;
@@ -202,7 +203,7 @@ private:
         string str_header;
         sz_file = fd_file = 0;
 
-        const string path_abs = string("./static/error.html", 19);
+        const string path_abs = config::path_url_error;
         ret = createFileBundle(path_abs, str_header, sz_file, fd_file, status_code);
         if (ret == -1) {
             logger::fail({__func__, " create file bundle failed!"});
@@ -216,16 +217,6 @@ private:
         close(sd);
         close(fd_file);
 
-        return 0;
-    }
-    // get path, without first '/'
-    int pathParser(string url, string &path) {
-        if (url == string({'/'}))
-            url = string("/static/index.html", 18);
-        else if (url == string("/favicon.ico", 12))
-            url = string("/static/favicon.icon", 20);
-        // just delete first '/'
-        path = url.substr(1, url.size() - 1);
         return 0;
     }
     // return num of lines readed, -1 for error, clear lines. do not read body
@@ -249,8 +240,8 @@ private:
                 logger::fail({__func__, " reader.readline return 0"});
                 return -1;
             }
-            if (ret > 0) lines.push_back(line);
             if (line == line_crlf) break;
+            if (ret > 0) lines.push_back(line);
         }
         ret = request_header::fromHeaderLines(lines, header);
         if (ret == -1) {
@@ -272,10 +263,11 @@ private:
             return -1;
         }
         string path;
+        vector<string> list_paras;
         logger::verbose({"parse request url"});
-        pathParser(header.url, path);
-        const int sz_path_tmp = path.size();
-        if (sz_path_tmp > 0 && path.find(config::path_url_static) == 0) {
+        // pathParser(header.url, path);
+        ret = utils::parse_url(header.url, path, list_paras);
+        if (ret == 1) {
             // static
             ret = serveStatic(path);
             if (ret == -1) {
@@ -284,9 +276,9 @@ private:
             } else if (ret == 1) {
                 serveError(response_header::CODE_NOT_FOUND);
             }
-        } else if (sz_path_tmp > 0 && path.find(config::path_url_cgi) == 0) {
+        } else if (ret == 0) {
             // cgi
-            ret = serveCgi(path, header);
+            ret = serveCgi(path, header, list_paras);
             if (ret == -1) {
                 logger::fail({__func__, " serve cgi failed"});
                 serveError(response_header::CODE_INTERNAL_SERVER_ERROR);

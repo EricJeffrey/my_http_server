@@ -2,32 +2,28 @@
 #include <execinfo.h>
 #include <signal.h>
 
-void handler(int sig) {
-    void *array[10];
-    size_t size;
-
-    // get void*'s for all entries on the stack
-    size = backtrace(array, 10);
-
-    // print out all the frames to stderr
-    fprintf(stderr, "Error: signal %d:\n", sig);
-    backtrace_symbols_fd(array, size, STDERR_FILENO);
-    exit(1);
-}
 void init() {
     { // config
         config::port = 8686;
         config::backlog = 1024;
-        config::path_url_static = "static/";
-        config::path_url_cgi = "cgi/";
         config::path_url_error = "static/error.html";
 
-        config::path_dir_static_root = "./static/";
-        config::path_dir_cgi_root = "./cgi/";
+        config::path_file_error = "static/error.html";
         config::path_file_cgi_process = "./cgi/main_cgi";
 
         config::debug = false;
         config::log_level = logger::LOG_LV_INFO;
+
+        config::list_url2path_static = {
+            PSS("/static/", "./static/"),
+            PSS("/hello/", "./hello/"),
+            PSS("/file/", "./file/"),
+        };
+        config::list_url2file_cgi = {
+            PSS("/take", "./take.py"),
+            PSS("/cgi/tell", "./tell.py"),
+            PSS("/find", "./find.py"),
+        };
     }
     { // response phrase
         response_header::code2phrase[response_header::CODE_OK] = "OK";
@@ -36,8 +32,6 @@ void init() {
 
         response_header::STR_VERSION_HTTP_1_1 = "HTTP/1.1";
     }
-    // install signal handler
-    signal(SIGSEGV, handler);
 }
 
 // connection per thread model

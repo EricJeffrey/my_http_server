@@ -2,6 +2,8 @@
 #define UTILS_H
 
 #include "config.h"
+#include <fcntl.h>
+#include <sys/stat.h>
 
 class utils {
 private:
@@ -72,6 +74,69 @@ public:
             }
         }
         return res;
+    }
+
+    // 判断文件是否为普通文件，-1 error, 0 not, 1 ok
+    static int isRegFile(const char *path) {
+        struct stat path_info;
+        int ret = stat(path, &path_info);
+        if (ret == -1) {
+            logger::info({"stat file failed"});
+            return -1;
+        }
+        if (path_info.st_mode & S_IFREG) return 1;
+        return 0;
+    };
+
+    // 从 fd 读取数据直到 [read] 返回 0
+    // return number of bytes read, -1 for error
+    static int readAll(int fd, string &res) {
+        res.clear();
+        int ret = 0;
+        const size_t sz_buf = 2048;
+        size_t n;
+        char buffer[sz_buf];
+        while (true) {
+            // will block on pipe
+            ret = read(fd, buffer, sz_buf);
+            if (ret == -1) {
+                if (errno == EINTR)
+                    continue;
+                logger::fail({__func__, " call to read failed"}, true);
+                cerr << "read failed" << endl;
+                return -1;
+            }
+            if (ret == 0) break;
+            n += ret;
+            res += string(buffer, ret);
+        }
+        return n;
+    };
+
+    // 将 [s] 中的内容写到 fd 中，-1 for error
+    static int writeStr2Fd(const string &s, int fd) {
+        const char *buf = s.c_str();
+        int sz = s.size();
+        while (true) {
+            int ret = write(fd, buf, sz);
+            // all bytes written
+            if (ret == sz) return 0;
+            if (ret == -1) {
+                logger::fail({__func__, " failed with string(first 20 bytes): ", s.substr(0, std::max((int)s.size(), 20))}, true);
+                return -1;
+            }
+            if (ret < sz) {
+                // interrupted by signal
+                int errno_tmp = errno;
+                if (errno_tmp == EINTR) {
+                    buf += ret;
+                    sz -= ret;
+                    continue;
+                }
+                logger::fail({__func__, " failed, bytes written less than size(ret < s.size())"}, true);
+                return -1;
+            }
+        }
     }
 };
 

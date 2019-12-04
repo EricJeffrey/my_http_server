@@ -24,6 +24,7 @@ void init() {
             PSS("/cgi/tell", "./tell.py"),
             PSS("/find", "./find.py"),
         };
+        config::env_query_string = "query";
     }
     { // response phrase
         response_header::code2phrase[response_header::CODE_OK] = "OK";

@@ -35,7 +35,7 @@ public:
         struct stat file_info;
         ret = stat(path_file.c_str(), &file_info);
         if (ret == -1) {
-            logger::fail({__func__, "stat file: ", path_file, " failed"}, true);
+            logger::fail({__func__, " call to stat file: ", path_file, " failed"}, true);
             return -1;
         }
         header.version = STR_VERSION_HTTP_1_1;
@@ -43,6 +43,14 @@ public:
         header.phrase = code2phrase[status_code];
         header.mp_gene_headers["Content-Type"] = "text/html;charset=UTF-8";
         header.mp_gene_headers["Content-Length"] = to_string(file_info.st_size);
+        return 0;
+    }
+    static int strHeader(const string &data, response_header &header, int status_code = 200) {
+        header.version = STR_VERSION_HTTP_1_1;
+        header.status_code = status_code;
+        header.phrase = code2phrase[status_code];
+        header.mp_gene_headers["Content-Type"] = "text/plain;charset=UTF-8";
+        header.mp_gene_headers["Content-Length"] = data.size();
         return 0;
     }
     string toString() {

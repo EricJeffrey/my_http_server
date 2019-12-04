@@ -34,7 +34,7 @@ private:
         }
         if (listen(listenfd, backlog) < 0) {
             close(listenfd);
-            logger::fail({__func__, "listen on socket failed"}, true);
+            logger::fail({__func__, " call to listen on socket failed"}, true);
             return -1;
         }
         return listenfd;
@@ -47,7 +47,7 @@ public:
     void start() {
         int sd_listen = openListenFd(config::port, config::backlog);
         if (sd_listen == -1) {
-            logger::fail({__func__, "open listen fd failed"}, true);
+            logger::fail({__func__, " call to open listen fd failed"}, true);
             exit(EXIT_FAILURE);
         }
         logger::info({"server started, listening on port 8686"});
@@ -58,7 +58,7 @@ public:
             socklen_t len_addr_tmp = sizeof(addr_tmp);
             int sd_conn = accept(sd_listen, (sockaddr *)&addr_tmp, &len_addr_tmp);
             if (sd_conn == -1)
-                logger::fail({__func__, "accept failed"}, true);
+                logger::fail({__func__, " call to accept failed"}, true);
             logger::info({"connection from: ", inet_ntoa(addr_tmp.sin_addr), " established with socket: ", to_string(sd_conn)});
             list_threads.push_back(thread(&conn_handler::start, conn_handler(sd_conn, addr_tmp, len_addr_tmp)));
         }

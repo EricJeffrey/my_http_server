@@ -32,7 +32,7 @@ private:
             ret = read(fd, buffer + pos_tmp, sz_to_read);
             int errno_tmp = errno;
             if (ret == -1) {
-                logger::fail({__func__, "read failed"}, true);
+                logger::fail({__func__, " call to read failed"}, true);
                 return -1;
             }
             if (ret < sz_to_read) {
@@ -71,11 +71,11 @@ public:
             ret = fillBuffer();
             logger::debug({__func__, "read line fillbuffer return: ", to_string(ret)});
             if (ret == -1) {
-                logger::fail({__func__, "fillbuffer failed"});
+                logger::fail({__func__, " call to fillbuffer failed"});
                 return -1;
             }
             if (ret == 0) {
-                logger::fail({__func__, "fillbuffer return 0"});
+                logger::fail({__func__, " call to fillbuffer return 0"});
                 return 0;
             }
         }
@@ -92,11 +92,11 @@ public:
                 ss << string(buffer + pos, buffer + len);
                 ret = fillBuffer();
                 if (ret == -1) {
-                    logger::fail({__func__, "fillbuffer failed in loop"});
+                    logger::fail({__func__, " call to fillbuffer failed in loop"});
                     return -1;
                 }
                 if (ret == 0) {
-                    logger::fail({__func__, "fillbuffer return 0, no crlf meet"});
+                    logger::fail({__func__, " call to fillbuffer return 0, no crlf meet"});
                     return 0;
                 }
             }

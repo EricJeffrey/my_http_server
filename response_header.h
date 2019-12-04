@@ -10,7 +10,6 @@ using std::map;
 using std::string;
 using std::to_string;
 
-typedef std::pair<int, string> P_IS;
 
 class response_header {
 public:
@@ -50,7 +49,7 @@ public:
         header.status_code = status_code;
         header.phrase = code2phrase[status_code];
         header.mp_gene_headers["Content-Type"] = "text/plain;charset=UTF-8";
-        header.mp_gene_headers["Content-Length"] = data.size();
+        header.mp_gene_headers["Content-Length"] = to_string(data.size());
         return 0;
     }
     string toString() {

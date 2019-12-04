@@ -9,22 +9,32 @@ void init() {
         config::path_url_error = "static/error.html";
 
         config::path_file_error = "static/error.html";
-        config::path_file_cgi_process = "./cgi/main_cgi";
 
-        config::debug = false;
+        config::debug = true;
         config::log_level = logger::LOG_LV_INFO;
 
+        typedef pair<string, string> PAIR_SS;
         config::list_url2path_static = {
-            PSS("/static/", "./static/"),
-            PSS("/hello/", "./hello/"),
-            PSS("/file/", "./file/"),
+            PAIR_SS("/static/", "./static/"),
+            PAIR_SS("/hello/", "./hello/"),
+            PAIR_SS("/file/", "./file/"),
         };
         config::list_url2file_cgi = {
-            PSS("/take", "./take.py"),
-            PSS("/cgi/tell", "./tell.py"),
-            PSS("/find", "./find.py"),
+            PAIR_SS("/take", "./take.py"),
+            PAIR_SS("/cgi/tell", "./tell.py"),
+            PAIR_SS("/find", "./find.py"),
         };
-        config::env_query_string = "query";
+
+        typedef pair<int, string> PAIR_IS;
+        config::map_code2file_error = {
+            PAIR_IS(response_header::CODE_NOT_FOUND, "./404.html"),
+            PAIR_IS(response_header::CODE_INTERNAL_SERVER_ERROR, "./500.html"),
+        };
+
+        config::timeout_sec_conn = 5.0;
+        config::timeout_sec_sock = 3.5;
+
+        config::env_query_string_key = "query";
     }
     { // response phrase
         response_header::code2phrase[response_header::CODE_OK] = "OK";

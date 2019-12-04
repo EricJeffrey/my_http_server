@@ -29,7 +29,7 @@ int startCgiProg(int fds_pipe[], const string &path_prog, const vector<string> &
         if (i != 0) query_string += '&';
         query_string += list_paras[i];
     }
-    setenv(config::env_query_string.c_str(), query_string.c_str(), 1);
+    setenv(config::env_query_string_key.c_str(), query_string.c_str(), 1);
     ret = dup2(fds_pipe[1], STDOUT_FILENO);
     if (ret == -1) {
         logger::fail({__func__, " call to dup2 failed"}, true);
@@ -43,7 +43,8 @@ int startCgiProg(int fds_pipe[], const string &path_prog, const vector<string> &
     return -1;
 }
 
-// 执行 [python3 path_prog]，并将标准输出的内容发送到 [sd], -1 for error, 0 success, 1 404
+// 执行 [python3 path_prog]，并将标准输出的内容发送到 [sd], 
+// -1 for error, 0 success, 1 404
 int serveCgi(const string &path_prog, const vector<string> &list_paras, int sd) {
     int ret = 0;
     ret = utils::isRegFile(path_prog.c_str());
@@ -113,7 +114,6 @@ int serveCgi(const string &path_prog, const vector<string> &list_paras, int sd) 
                 logger::fail({__func__, " call of writeStr2Fd failed"});
                 return -1;
             }
-            close(sd);
             return 0;
         } else {
             logger::fail({__func__, " cgi prog: ", path_prog, " exit with non-zero value: ", to_string(exit_code_child)});

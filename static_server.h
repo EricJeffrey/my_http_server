@@ -21,9 +21,9 @@ int writeFBundle2client(const string &str_header, const int sz_file, const int f
     return 0;
 }
 // todo different file type
-// give filepath, create [header], [file_size] and **opened** [fd_file]
+// give filepath, create [header], [file_size] and **OPENED** [fd_file]
 // -1 for error, and fd_file is not specified
-int createFileBundle(string path_abs, string &str_header, int &sz_file, int &fd_file, int status_code = 200) {
+int createFileBundle(const string &path_abs, string &str_header, int &sz_file, int &fd_file, int status_code = 200) {
     logger::verbose({"creating static file bundles"});
     if (access(path_abs.c_str(), F_OK | R_OK) == -1) {
         logger::fail({__func__, " call to  access file: ", path_abs, " failed"}, true);
@@ -76,11 +76,9 @@ int serveStatic(string path_abs, const int sd) {
         logger::fail({__func__, " call to  write file bundle failed"});
         return -1;
     }
-    if (close(sd) != -1) {
-        if (close(fd_file) != -1) {
-            logger::verbose({"response to socket: ", to_string(sd), " successfully written "});
-            return 0;
-        }
+    if (close(fd_file) != -1) {
+        logger::verbose({"response to socket: ", to_string(sd), " successfully written "});
+        return 0;
     }
     logger::fail({__func__, " call to  close sd or fd_file failed"}, true);
     return -1;

@@ -40,7 +40,7 @@ void test_parse_url() {
         cout << std::setw(23) << url_tmp << '\t' << std::setw(0);
         vector<string> paras;
         string path;
-        int ret = utils::parse_url(url_tmp, path, paras);
+        int ret = utils::parseUrl(url_tmp, path, paras);
         if (ret == -1) {
             cout << "failed" << endl;
         } else {

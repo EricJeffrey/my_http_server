@@ -22,7 +22,7 @@ private:
         pos = len = 0;
     }
 
-    // clear buffer, return [length], -1 for error
+    // clear buffer, return [length], -1 for error, -2 for [fd] timeout
     int fillBuffer() {
         resetBuffer();
         int ret = 0;
@@ -32,6 +32,12 @@ private:
             ret = read(fd, buffer + pos_tmp, sz_to_read);
             int errno_tmp = errno;
             if (ret == -1) {
+                // socket timeout
+                if (errno_tmp == EAGAIN || errno_tmp == EWOULDBLOCK) {
+                    // todo reconsider about timeout
+                    logger::verbose({"read on sd: ", to_string(fd), " timeout"});
+                    return -2;
+                }
                 logger::fail({__func__, " call to read failed"}, true);
                 return -1;
             }
@@ -62,21 +68,23 @@ public:
     }
     ~buffered_reader() {}
 
-    // save '\r\n', return [length], -1 for error. !! [line] will be cleared!
+    // save '\r\n' !! [line] will be cleared!
+    // return [length], -1 for error, -2 for timeout
     int readLine(string &line) {
         line.clear();
         stringstream ss;
         int ret = 0;
         if (len == 0) {
             ret = fillBuffer();
-            logger::debug({__func__, "read line fillbuffer return: ", to_string(ret)});
             if (ret == -1) {
                 logger::fail({__func__, " call to fillbuffer failed"});
                 return -1;
-            }
-            if (ret == 0) {
+            } else if (ret == 0) {
                 logger::fail({__func__, " call to fillbuffer return 0"});
                 return 0;
+            } else if (ret == -2) {
+                logger::verbose({"call to fillbuffer return -2: timeout"});
+                return -2;
             }
         }
         for (int ed = pos;; ed++) {
@@ -94,10 +102,12 @@ public:
                 if (ret == -1) {
                     logger::fail({__func__, " call to fillbuffer failed in loop"});
                     return -1;
-                }
-                if (ret == 0) {
+                } else if (ret == 0) {
                     logger::fail({__func__, " call to fillbuffer return 0, no crlf meet"});
                     return 0;
+                } else if (ret == -2) {
+                    logger::verbose({"call to fillbuffer return -2: timeout"});
+                    return -2;
                 }
             }
         }

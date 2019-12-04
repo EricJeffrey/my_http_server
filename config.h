@@ -1,12 +1,15 @@
 #if !defined(CONFIG_H)
 #define CONFIG_H
 #include <string>
+#include <unordered_map>
 #include <vector>
 using std::pair;
 using std::string;
+using std::unordered_map;
 using std::vector;
 
-typedef pair<string, string> PSS;
+typedef pair<string, string> PAIR_SS;
+typedef pair<int, string> PAIR_IS;
 
 class config {
 public:
@@ -14,14 +17,17 @@ public:
     static int backlog;
 
     static string path_url_error;
-
-    static string path_file_cgi_process;
     static string path_file_error;
+    static vector<PAIR_SS> list_url2path_static;
+    static vector<PAIR_SS> list_url2file_cgi;
+    static unordered_map<int, string> map_code2file_error;
 
-    static vector<PSS> list_url2path_static;
-    static vector<PSS> list_url2file_cgi;
+    static string env_query_string_key;
 
-    static string env_query_string;
+    // timeout of connection
+    static double timeout_sec_conn;
+    // timeout of read/recv/send/sendmsg on socket
+    static double timeout_sec_sock;
 
     static bool debug;
     static int log_level;
@@ -32,12 +38,16 @@ public:
 int config::port;
 int config::backlog;
 string config::path_url_error;
-string config::path_file_cgi_process;
 string config::path_file_error;
 bool config::debug;
 int config::log_level;
 
-vector<PSS> config::list_url2path_static;
-vector<PSS> config::list_url2file_cgi;
-string config::env_query_string;
+vector<PAIR_SS> config::list_url2path_static;
+vector<PAIR_SS> config::list_url2file_cgi;
+unordered_map<int, string> config::map_code2file_error;
+
+double config::timeout_sec_conn;
+double config::timeout_sec_sock;
+
+string config::env_query_string_key;
 #endif // CONFIG_H

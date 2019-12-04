@@ -12,7 +12,7 @@ public:
     ~utils() {}
     // 解析url路径与参数，返回路径类型
     // 1-static，0-cgi，-1-error
-    static int parse_url(string url, string &path, vector<string> &paras_list) {
+    static int parseUrl(string url, string &path, vector<string> &paras_list) {
         path.clear();
         paras_list.clear();
         const size_t npos = string::npos;

@@ -2,31 +2,39 @@
 #include <execinfo.h>
 #include <signal.h>
 
-void handler(int sig) {
-    void *array[10];
-    size_t size;
-
-    // get void*'s for all entries on the stack
-    size = backtrace(array, 10);
-
-    // print out all the frames to stderr
-    fprintf(stderr, "Error: signal %d:\n", sig);
-    backtrace_symbols_fd(array, size, STDERR_FILENO);
-    exit(1);
-}
 void init() {
     { // config
         config::port = 8686;
         config::backlog = 1024;
-        config::path_url_static = "static/";
-        config::path_url_cgi = "cgi/";
         config::path_url_error = "static/error.html";
 
-        config::path_dir_static_root = "./static/";
-        config::path_file_cgi_process = "./cgi/main_cgi";
+        config::path_file_error = "static/error.html";
 
-        config::debug = false;
+        config::debug = true;
         config::log_level = logger::LOG_LV_INFO;
+
+        typedef pair<string, string> PAIR_SS;
+        config::list_url2path_static = {
+            PAIR_SS("/static/", "./static/"),
+            PAIR_SS("/hello/", "./hello/"),
+            PAIR_SS("/file/", "./file/"),
+        };
+        config::list_url2file_cgi = {
+            PAIR_SS("/take", "./take.py"),
+            PAIR_SS("/cgi/tell", "./tell.py"),
+            PAIR_SS("/find", "./find.py"),
+        };
+
+        typedef pair<int, string> PAIR_IS;
+        config::map_code2file_error = {
+            PAIR_IS(response_header::CODE_NOT_FOUND, "./404.html"),
+            PAIR_IS(response_header::CODE_INTERNAL_SERVER_ERROR, "./500.html"),
+        };
+
+        config::timeout_sec_conn = 5.0;
+        config::timeout_sec_sock = 3.5;
+
+        config::env_query_string_key = "query";
     }
     { // response phrase
         response_header::code2phrase[response_header::CODE_OK] = "OK";
@@ -35,8 +43,6 @@ void init() {
 
         response_header::STR_VERSION_HTTP_1_1 = "HTTP/1.1";
     }
-    // install signal handler
-    signal(SIGSEGV, handler);
 }
 
 // connection per thread model

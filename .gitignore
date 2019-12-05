@@ -1,6 +1,5 @@
 *.o
 *.out
-
 *.log
 
 start_up
@@ -12,3 +11,5 @@ pages/
 
 foo.txt
 bar.txt
+
+

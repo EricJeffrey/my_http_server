@@ -15,7 +15,7 @@ int writeFBundle2client(const string &str_header, const int sz_file, const int f
     if (ret != -1)
         ret = sendfile(sd, fd_file, NULL, sz_file);
     if (ret == -1) {
-        logger::fail({__func__, " call to  call to  write file fd: ", to_string(fd_file), " to client failed"}, true);
+        logger::fail({"in ", __func__, ": call to  call to  write file fd: ", to_string(fd_file), " to client failed"}, true);
         return -1;
     }
     return 0;
@@ -26,7 +26,7 @@ int writeFBundle2client(const string &str_header, const int sz_file, const int f
 int createFileBundle(const string &path_abs, string &str_header, int &sz_file, int &fd_file, int status_code = 200) {
     logger::verbose({"creating static file bundles"});
     if (access(path_abs.c_str(), F_OK | R_OK) == -1) {
-        logger::fail({__func__, " call to  access file: ", path_abs, " failed"}, true);
+        logger::fail({"in ", __func__, ": call to  access file: ", path_abs, " failed"}, true);
         return -1;
     }
     response_header header;
@@ -34,13 +34,13 @@ int createFileBundle(const string &path_abs, string &str_header, int &sz_file, i
 
     fd_file = open(path_abs.c_str(), O_RDONLY);
     if (fd_file == -1) {
-        logger::fail({__func__, " call to  open ", path_abs, " failed"}, true);
+        logger::fail({"in ", __func__, ": call to  open ", path_abs, " failed"}, true);
         return -1;
     }
     struct stat file_info;
     int ret = fstat(fd_file, &file_info);
     if (ret == -1) {
-        logger::fail({__func__, " call to  fstat failed"}, true);
+        logger::fail({"in ", __func__, ": call to  fstat failed"}, true);
         return -1;
     }
     str_header = header.toString();
@@ -67,20 +67,20 @@ int serveStatic(string path_abs, const int sd) {
     int fd_file = 0;
     ret = createFileBundle(path_abs, str_header, sz_file, fd_file);
     if (ret == -1) {
-        logger::fail({__func__, " call to  create file bundle failed"});
+        logger::fail({"in ", __func__, ": call to  create file bundle failed"});
         return -1;
     }
     // do all write here
     ret = writeFBundle2client(str_header, sz_file, fd_file, sd);
     if (ret == -1) {
-        logger::fail({__func__, " call to  write file bundle failed"});
+        logger::fail({"in ", __func__, ": call to  write file bundle failed"});
         return -1;
     }
     if (close(fd_file) != -1) {
         logger::verbose({"response to socket: ", to_string(sd), " successfully written "});
         return 0;
     }
-    logger::fail({__func__, " call to  close sd or fd_file failed"}, true);
+    logger::fail({"in ", __func__, ": call to  close sd or fd_file failed"}, true);
     return -1;
 }
 

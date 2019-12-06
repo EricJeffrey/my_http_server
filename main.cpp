@@ -4,6 +4,7 @@
 
 void init() {
     { // config
+        config::address = "127.0.0.1";
         config::port = 8686;
         config::backlog = 1024;
         config::path_url_error = "static/error.html";

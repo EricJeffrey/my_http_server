@@ -13,6 +13,8 @@ typedef pair<int, string> PAIR_IS;
 
 class config {
 public:
+    // todo listen on which address(localhost or 0.0.0.0)
+    static string address;
     static int port;
     static int backlog;
 
@@ -33,6 +35,8 @@ public:
     config() {}
     ~config() {}
 };
+
+string config::address;
 int config::port;
 int config::backlog;
 string config::path_url_error;

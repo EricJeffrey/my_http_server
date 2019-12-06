@@ -32,14 +32,14 @@ int startCgiProg(int fds_pipe[], const string &path_prog, const vector<string> &
     setenv(config::env_query_string_key.c_str(), query_string.c_str(), 1);
     ret = dup2(fds_pipe[1], STDOUT_FILENO);
     if (ret == -1) {
-        logger::fail({__func__, " call to dup2 failed"}, true);
+        logger::fail({"in ", __func__, ": call to dup2 failed"}, true);
         return -1;
     }
     char *path_cstr = strdup(path_prog.c_str());
     char *path_exe = strdup("python3");
     char *argv[] = {path_exe, path_cstr, NULL};
     execvp(path_exe, argv);
-    logger::fail({__func__, " call to execvp failed"}, true);
+    logger::fail({"in ", __func__, ": call to execvp failed"}, true);
     return -1;
 }
 
@@ -61,7 +61,7 @@ int serveCgi(const string &path_prog, const vector<string> &list_paras, int sd) 
     // create pipe
     ret = pipe(fds_pipe);
     if (ret == -1) {
-        logger::fail({__func__, " call to pipe failed"}, true);
+        logger::fail({"in ", __func__, ": call to pipe failed"}, true);
         return -1;
     }
     // handle SIGCHLD, must install sighandler to make sigsuspend run(otherwise it will hang)
@@ -73,14 +73,14 @@ int serveCgi(const string &path_prog, const vector<string> &list_paras, int sd) 
     // start child
     pid_t pid_child = fork();
     if (pid_child == -1) {
-        logger::fail({__func__, " call to fork failed"}, true);
+        logger::fail({"in ", __func__, ": call to fork failed"}, true);
         return -1;
     } else if (pid_child == 0) {
         sigprocmask(SIG_SETMASK, &prev, NULL);
         // child
         ret = startCgiProg(fds_pipe, path_prog, list_paras);
         if (ret == -1) {
-            logger::fail({__func__, " call to startCgiProg failed"});
+            logger::fail({"in ", __func__, ": call to startCgiProg failed"});
             return -1;
         }
     } else if (pid_child > 0) {
@@ -90,10 +90,10 @@ int serveCgi(const string &path_prog, const vector<string> &list_paras, int sd) 
         string data;
         ret = utils::readAll(fds_pipe[0], data);
         if (ret == -1) {
-            logger::fail({__func__, " call to utils.readAll failed"});
+            logger::fail({"in ", __func__, ": call to utils.readAll failed"});
             return -1;
         } else if (ret == -2) {
-            logger::fail({__func__, " call to utils.readAll failed, would block!"});
+            logger::fail({"in ", __func__, ": call to utils.readAll failed, would block!"});
             return -1;
         }
         int status_child;
@@ -101,7 +101,7 @@ int serveCgi(const string &path_prog, const vector<string> &list_paras, int sd) 
         // start waitpid
         ret = waitpid(pid_child, &status_child, 0);
         if (ret == -1) {
-            logger::fail({__func__, " call to waitpid failed"}, true);
+            logger::fail({"in ", __func__, ": call to waitpid failed"}, true);
             return -1;
         }
         const int exit_code_child = WEXITSTATUS(status_child);
@@ -114,12 +114,12 @@ int serveCgi(const string &path_prog, const vector<string> &list_paras, int sd) 
             string resp = header.toString() + "\r\n" + data;
             ret = utils::writeStr2Fd(resp, sd);
             if (ret == -1) {
-                logger::fail({__func__, " call of writeStr2Fd failed"});
+                logger::fail({"in ", __func__, ": call of writeStr2Fd failed"});
                 return -1;
             }
             return 0;
         } else {
-            logger::fail({__func__, " cgi prog: ", path_prog, " exit with non-zero value: ", to_string(exit_code_child)});
+            logger::fail({"in ", __func__, ": cgi prog: ", path_prog, " exit with non-zero value: ", to_string(exit_code_child)});
             return -1;
         }
     }

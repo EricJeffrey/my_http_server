@@ -22,6 +22,7 @@ using std::stringstream;
 
 class logger {
 private:
+    // get current thread id
     static void preInfo(stringstream &ss) {
         pid_t tid = syscall(__NR_gettid);
         ss << tid << " ";
@@ -67,7 +68,7 @@ public:
         preInfo(ss);
         ss << "ERROR\t";
         if (show_erron && errno_tmp != 0)
-            ss << "errno: " << errno_tmp << ", " << err_msg << '.';
+            ss << "errno: " << errno_tmp << ", " << err_msg << ". ";
         msgInfo(ss, msg_list);
         cerr << ss.str() << '.' << endl;
     }

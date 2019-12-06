@@ -37,7 +37,7 @@ private:
                     logger::verbose({"read on sd: ", to_string(fd), " would block"});
                     return -2;
                 }
-                logger::fail({__func__, " call to read failed"}, true);
+                logger::fail({"in ", __func__, ": call to read failed"}, true);
                 return -1;
             }
             if (ret < sz_to_read) {
@@ -76,10 +76,10 @@ public:
         if (len == 0) {
             ret = fillBuffer();
             if (ret == -1) {
-                logger::fail({__func__, " call to fillbuffer failed"});
+                logger::fail({"in ", __func__, ": call to fillbuffer failed"});
                 return -1;
             } else if (ret == 0) {
-                logger::fail({__func__, " call to fillbuffer return 0"});
+                logger::fail({"in ", __func__, ": call to fillbuffer return 0"});
                 return 0;
             } else if (ret == -2) {
                 logger::verbose({"fillBuffer would block"});
@@ -99,10 +99,10 @@ public:
                 ss << string(buffer + pos, buffer + len);
                 ret = fillBuffer();
                 if (ret == -1) {
-                    logger::fail({__func__, " call to fillbuffer failed in loop"});
+                    logger::fail({"in ", __func__, ": call to fillbuffer failed in loop"});
                     return -1;
                 } else if (ret == 0) {
-                    logger::fail({__func__, " call to fillbuffer return 0, no crlf meet"});
+                    logger::fail({"in ", __func__, ": call to fillbuffer return 0, no crlf meet"});
                     return 0;
                 } else if (ret == -2) {
                     logger::verbose({"fillBuffer would block"});

@@ -34,7 +34,7 @@ public:
         struct stat file_info;
         ret = stat(path_file.c_str(), &file_info);
         if (ret == -1) {
-            logger::fail({__func__, " call to stat file: ", path_file, " failed"}, true);
+            logger::fail({"in ", __func__, ": call to stat file: ", path_file, " failed"}, true);
             return -1;
         }
         header.version = STR_VERSION_HTTP_1_1;

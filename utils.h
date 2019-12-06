@@ -110,7 +110,7 @@ public:
                     logger::info({"read on sd: ", to_string(fd), " would block"});
                     return -2;
                 }
-                logger::fail({__func__, " call to read failed"}, true);
+                logger::fail({"in ", __func__, ": call to read failed"}, true);
                 cerr << "read failed" << endl;
                 return -1;
             }
@@ -130,7 +130,7 @@ public:
             // all bytes written
             if (ret == sz) return 0;
             if (ret == -1) {
-                logger::fail({__func__, " failed with string(first 20 bytes): ", s.substr(0, std::max((int)s.size(), 20))}, true);
+                logger::fail({"in ", __func__, ": failed with string(first 20 bytes): ", s.substr(0, std::max((int)s.size(), 20))}, true);
                 return -1;
             }
             if (ret < sz) {
@@ -141,7 +141,7 @@ public:
                     sz -= ret;
                     continue;
                 }
-                logger::fail({__func__, " failed, bytes written less than size(ret < s.size())"}, true);
+                logger::fail({"in ", __func__, ": failed, bytes written less than size(ret < s.size())"}, true);
                 return -1;
             }
         }

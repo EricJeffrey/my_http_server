@@ -26,8 +26,6 @@ public:
 
     // timeout of connection
     static double timeout_sec_conn;
-    // timeout of read/recv/send/sendmsg on socket
-    static double timeout_sec_sock;
 
     static bool debug;
     static int log_level;
@@ -47,7 +45,6 @@ vector<PAIR_SS> config::list_url2file_cgi;
 unordered_map<int, string> config::map_code2file_error;
 
 double config::timeout_sec_conn;
-double config::timeout_sec_sock;
 
 string config::env_query_string_key;
 #endif // CONFIG_H

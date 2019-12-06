@@ -47,7 +47,7 @@ int createFileBundle(const string &path_abs, string &str_header, int &sz_file, i
     sz_file = file_info.st_size;
     return 0;
 }
-// path_url has 'static/', -1 for internal error, 0 for success, 1 for 404
+// path_url has 'static/', -1 for internal error, 0 for success, -2 for 404
 int serveStatic(string path_abs, const int sd) {
     logger::info({"start serve static file: ", path_abs});
 
@@ -56,10 +56,10 @@ int serveStatic(string path_abs, const int sd) {
     ret = utils::isRegFile(path_abs.c_str());
     if (ret == -1) { // no such file
         logger::info({path_abs, " doesnot exist"});
-        return 1;
+        return -2;
     } else if (ret == 0) { // not a regular file
         logger::info({path_abs, " not a regular file"});
-        return 1;
+        return -2;
     }
     // create bundle
     string str_header;

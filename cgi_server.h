@@ -43,15 +43,15 @@ int startCgiProg(int fds_pipe[], const string &path_prog, const vector<string> &
     return -1;
 }
 
-// 执行 [python3 path_prog]，并将标准输出的内容发送到 [sd], 
-// -1 for error, 0 success, 1 404
+// 执行 [python3 path_prog]，并将标准输出的内容发送到 [sd],
+// -1 for error, 0 success, -2 404
 int serveCgi(const string &path_prog, const vector<string> &list_paras, int sd) {
     int ret = 0;
     ret = utils::isRegFile(path_prog.c_str());
     // check file accessibility
     if (ret == -1 || ret == 0) {
         logger::info({__func__, " call to utils.isRegFile failed"});
-        return 1;
+        return -2;
     }
     if (access(path_prog.c_str(), F_OK | R_OK) == -1) {
         logger::info({__func__, " call to access failed, file not found or cannot read"});
@@ -91,6 +91,9 @@ int serveCgi(const string &path_prog, const vector<string> &list_paras, int sd) 
         ret = utils::readAll(fds_pipe[0], data);
         if (ret == -1) {
             logger::fail({__func__, " call to utils.readAll failed"});
+            return -1;
+        } else if (ret == -2) {
+            logger::fail({__func__, " call to utils.readAll failed, would block!"});
             return -1;
         }
         int status_child;

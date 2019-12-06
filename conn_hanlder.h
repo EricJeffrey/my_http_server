@@ -65,12 +65,11 @@ private:
     // clear lines. do not read body
     // return num of lines readed, -1 for error, -2 for timeout
     int readRequestHeader(request_header &header) {
-        logger::info({"reading request from socket: ", to_string(sd)});
 
         buffered_reader reader(sd);
         int ret = 0;
         // check header end
-        const string line_crlf = string({'\r', '\n'});
+        const string line_crlf = string("\r\n");
         vector<string> lines;
         while (true) {
             string line;
@@ -79,7 +78,7 @@ private:
                 logger::fail({__func__, " call to reader.readline on sd: ", to_string(sd), " failed"});
                 return -1;
             } else if (ret == -2) {
-                logger::verbose({"reader.readline Timeout"});
+                logger::verbose({"reader.readline would block"});
                 return -2;
             } else if (ret == 0) {
                 logger::fail({__func__, " call to reader.readline on sd: ", to_string(sd), " return 0"});
@@ -97,18 +96,25 @@ private:
     }
     // run in new thread!
     int handleNewConn() {
-        logger::info({"handling new conn from: ", inet_ntoa(addr.sin_addr)});
+        logger::info({"handling new conn from sock: ", to_string(sd), " , addr: ", inet_ntoa(addr.sin_addr)});
         int ret = 0;
 
-        // set socket read timeout
-        struct timeval tv;
-        tv.tv_sec = (decltype(tv.tv_sec))(config::timeout_sec_sock);
-        tv.tv_usec = (decltype(tv.tv_usec))((config::timeout_sec_sock - tv.tv_sec) * 1000);
-        ret = setsockopt(sd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof tv);
+        // set to nonblock
+        ret = fcntl(sd, F_SETFL, O_NONBLOCK);
         if (ret == -1) {
-            logger::fail({__func__, " call to setsockopt failed"}, true);
+            logger::fail({__func__, " call to fcntl, set socket nonblock failed"}, true);
+            close(sd);
             return -1;
         }
+        // set socket read timeout
+        // struct timeval tv;
+        // tv.tv_sec = (decltype(tv.tv_sec))(config::timeout_sec_sock);
+        // tv.tv_usec = (decltype(tv.tv_usec))((config::timeout_sec_sock - tv.tv_sec) * 1000);
+        // ret = setsockopt(sd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof tv);
+        // if (ret == -1) {
+        //     logger::fail({__func__, " call to setsockopt failed"}, true);
+        //     return -1;
+        // }
 
         clock_t clock_start = clock();
         while ((clock() - clock_start) / (double)CLOCKS_PER_SEC < config::timeout_sec_conn) {
@@ -119,10 +125,9 @@ private:
                 serveError(response_header::CODE_INTERNAL_SERVER_ERROR);
                 return -1;
             } else if (ret == -2) {
-                // timeout
-                logger::info({__func__, " call to readRequestHeader failed, socket: ", to_string(sd), " Timeout"});
-                close(sd);
-                return -1;
+                // would block, continue
+                logger::verbose({__func__, " call to readRequestHeader failed, socket: ", to_string(sd), " Timeout"});
+                continue;
             }
             logger::debug({"request url: ", header.url});
             string path;
@@ -135,7 +140,7 @@ private:
                 if (ret == -1) {
                     logger::fail({__func__, " call to serve static file failed"});
                     serveError(response_header::CODE_INTERNAL_SERVER_ERROR);
-                } else if (ret == 1) {
+                } else if (ret == -2) {
                     serveError(response_header::CODE_NOT_FOUND);
                 }
             } else if (ret == 0) {
@@ -144,7 +149,7 @@ private:
                 if (ret == -1) {
                     logger::fail({__func__, " call to serve cgi failed"});
                     serveError(response_header::CODE_INTERNAL_SERVER_ERROR);
-                } else if (ret == 1) {
+                } else if (ret == -2) {
                     logger::info({"no cgi prog found"});
                     serveError(response_header::CODE_NOT_FOUND);
                 }
@@ -152,6 +157,7 @@ private:
                 serveError(response_header::CODE_NOT_FOUND);
             }
         }
+        logger::info({"connection from socket: ", to_string(sd), " timeout, closing"});
         ret = close(sd);
         if (ret < 0) {
             logger::fail({__func__, " call to close failed"}, true);

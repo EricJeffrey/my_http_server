@@ -3,7 +3,10 @@
 
 #include "config.h"
 #include <fcntl.h>
+#include <string>
 #include <sys/stat.h>
+
+using std::to_string;
 
 class utils {
 private:
@@ -89,7 +92,7 @@ public:
     };
 
     // 从 fd 读取数据直到 [read] 返回 0
-    // return number of bytes read, -1 for error
+    // return number of bytes read, -1 for error, -2 for EAGAIN|EWOULDBLOCK
     static int readAll(int fd, string &res) {
         res.clear();
         int ret = 0;
@@ -99,9 +102,14 @@ public:
         while (true) {
             // will block on pipe
             ret = read(fd, buffer, sz_buf);
+            int errno_tmp = errno;
             if (ret == -1) {
-                if (errno == EINTR)
+                if (errno_tmp == EINTR)
                     continue;
+                if (errno_tmp == EAGAIN || errno_tmp == EWOULDBLOCK) {
+                    logger::info({"read on sd: ", to_string(fd), " would block"});
+                    return -2;
+                }
                 logger::fail({__func__, " call to read failed"}, true);
                 cerr << "read failed" << endl;
                 return -1;

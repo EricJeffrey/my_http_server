@@ -16,6 +16,7 @@ void init() {
         typedef pair<string, string> PAIR_SS;
         config::list_url2path_static = {
             PAIR_SS("/static/", "./static/"),
+            PAIR_SS("/", "./"),
             PAIR_SS("/hello/", "./hello/"),
             PAIR_SS("/file/", "./file/"),
         };
@@ -31,8 +32,7 @@ void init() {
             PAIR_IS(response_header::CODE_INTERNAL_SERVER_ERROR, "./500.html"),
         };
 
-        config::timeout_sec_conn = 5.0;
-        config::timeout_sec_sock = 3.5;
+        config::timeout_sec_conn = 3;
 
         config::env_query_string_key = "query";
     }

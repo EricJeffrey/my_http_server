@@ -22,7 +22,7 @@ private:
         pos = len = 0;
     }
 
-    // clear buffer, return [length], -1 for error, -2 for [fd] timeout
+    // clear buffer, return [length], -1 for error, -2 for [fd] EAGAIN|EWOULDBLOCK
     int fillBuffer() {
         resetBuffer();
         int ret = 0;
@@ -34,8 +34,7 @@ private:
             if (ret == -1) {
                 // socket timeout
                 if (errno_tmp == EAGAIN || errno_tmp == EWOULDBLOCK) {
-                    // todo reconsider about timeout
-                    logger::verbose({"read on sd: ", to_string(fd), " timeout"});
+                    logger::verbose({"read on sd: ", to_string(fd), " would block"});
                     return -2;
                 }
                 logger::fail({__func__, " call to read failed"}, true);
@@ -83,7 +82,7 @@ public:
                 logger::fail({__func__, " call to fillbuffer return 0"});
                 return 0;
             } else if (ret == -2) {
-                logger::verbose({"call to fillbuffer return -2: timeout"});
+                logger::verbose({"fillBuffer would block"});
                 return -2;
             }
         }
@@ -106,7 +105,7 @@ public:
                     logger::fail({__func__, " call to fillbuffer return 0, no crlf meet"});
                     return 0;
                 } else if (ret == -2) {
-                    logger::verbose({"call to fillbuffer return -2: timeout"});
+                    logger::verbose({"fillBuffer would block"});
                     return -2;
                 }
             }

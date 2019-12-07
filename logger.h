@@ -44,7 +44,7 @@ public:
         if (config::log_level >= LOG_LV_INFO) {
             stringstream ss;
             preInfo(ss);
-            ss << "log\t";
+            ss << "info\t";
             msgInfo(ss, msg_list);
             cerr << ss.str() << endl;
         }

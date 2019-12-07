@@ -10,7 +10,6 @@
 // write [str_header] [fd_file] to client, using [write2client] and [sendfile]
 // won't close [sd] [fd_file]
 int writeFBundle2client(const string &str_header, const int sz_file, const int fd_file, const int sd) {
-    logger::verbose({"start write file bundles to client"});
     int ret = utils::writeStr2Fd(str_header, sd);
     if (ret != -1)
         ret = sendfile(sd, fd_file, NULL, sz_file);
@@ -24,7 +23,6 @@ int writeFBundle2client(const string &str_header, const int sz_file, const int f
 // give filepath, create [header], [file_size] and **OPENED** [fd_file]
 // -1 for error, and fd_file is not specified
 int createFileBundle(const string &path_abs, string &str_header, int &sz_file, int &fd_file, int status_code = 200) {
-    logger::verbose({"creating static file bundles"});
     if (access(path_abs.c_str(), F_OK | R_OK) == -1) {
         logger::fail({"in ", __func__, ": call to  access file: ", path_abs, " failed"}, true);
         return -1;
@@ -55,7 +53,7 @@ int serveStatic(string path_abs, const int sd) {
     // generate header
     ret = utils::isRegFile(path_abs.c_str());
     if (ret == -1) { // no such file
-        logger::info({path_abs, " doesnot exist"});
+        logger::info({path_abs, " does not exist"});
         return -2;
     } else if (ret == 0) { // not a regular file
         logger::info({path_abs, " not a regular file"});

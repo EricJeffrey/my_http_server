@@ -33,7 +33,7 @@ private:
         if (mp.find(status_code) == mp.end()) {
             // unsupported, just send code
             response_header header;
-            const string data = "error";
+            const string data = "error" + to_string(status_code);
             response_header::strHeader(data, header, status_code);
             string resp = header.toString() + data;
             ret = utils::writeStr2Fd(resp, sd);
@@ -63,7 +63,7 @@ private:
         return 0;
     }
     // clear lines. do not read body
-    // return num of lines readed, -1 for error, -2 for wouldblock
+    // return num of lines readed, -1 for error, -2 for wouldblock, -3 for closed
     int readRequestHeader(request_header &header) {
 
         buffered_reader reader(sd);
@@ -78,11 +78,10 @@ private:
                 logger::fail({"in ", __func__, ": call to reader.readline on sd: ", to_string(sd), " failed"});
                 return -1;
             } else if (ret == -2) {
-                logger::verbose({"reader.readline would block"});
                 return -2;
             } else if (ret == 0) {
-                logger::fail({"in ", __func__, ": call to reader.readline on sd: ", to_string(sd), " return 0"});
-                return -1;
+                logger::info({"in ", __func__, ": call to reader.readline on sd: ", to_string(sd), " return 0, closed"});
+                return -3;
             }
             if (line == line_crlf) break;
             if (ret > 0) lines.push_back(line);
@@ -110,7 +109,6 @@ private:
         clock_t clock_start = clock();
         while ((clock() - clock_start) / (double)CLOCKS_PER_SEC < config::timeout_sec_conn) {
             request_header header;
-            // FIXME: error when wget, fillBuffer return 0 and it dies
             ret = readRequestHeader(header);
             if (ret == -1) {
                 logger::fail({"in ", __func__, ": call to readRequestHeader failed"});
@@ -118,19 +116,21 @@ private:
                 return -1;
             } else if (ret == -2) {
                 // would block, continue
-                logger::verbose({__func__, " call to readRequestHeader failed, socket: ", to_string(sd), " Timeout"});
                 continue;
+            } else if (ret == -3) {
+                logger::info({"connection to socket: ", to_string(sd), " closed"});
+                close(sd);
+                return 0;
             }
             logger::debug({"request url: ", header.url});
             string path;
             vector<string> list_paras;
-            logger::verbose({"parse request url"});
             ret = utils::parseUrl(header.url, path, list_paras);
             if (ret == 1) {
                 // static
                 ret = serveStatic(path, sd);
                 if (ret == -1) {
-                    logger::fail({"in ", __func__, ": call to serve static file failed"});
+                    logger::fail({"in ", __func__, ": call to serveStatic failed"});
                     serveError(response_header::CODE_INTERNAL_SERVER_ERROR);
                 } else if (ret == -2) {
                     serveError(response_header::CODE_NOT_FOUND);
@@ -139,22 +139,17 @@ private:
                 // cgi
                 ret = serveCgi(path, list_paras, sd);
                 if (ret == -1) {
-                    logger::fail({"in ", __func__, ": call to serve cgi failed"});
+                    logger::fail({"in ", __func__, ": call to serveCgi failed"});
                     serveError(response_header::CODE_INTERNAL_SERVER_ERROR);
                 } else if (ret == -2) {
-                    logger::info({"no cgi prog found"});
                     serveError(response_header::CODE_NOT_FOUND);
                 }
             } else {
                 serveError(response_header::CODE_NOT_FOUND);
             }
         }
-        logger::info({"connection from socket: ", to_string(sd), " timeout, closing"});
+        logger::verbose({"connection from socket: ", to_string(sd), " timeout, closing"});
         ret = close(sd);
-        if (ret < 0) {
-            logger::fail({"in ", __func__, ": call to close failed"}, true);
-            return -1;
-        }
         return 0;
     }
 

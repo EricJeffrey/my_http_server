@@ -31,7 +31,6 @@ public:
 
     // -1 for error
     static int fromHeaderLines(vector<string> line_headers, request_header &header) {
-        logger::verbose({"creating request header from header lines"});
         if (line_headers.size() <= 0) {
             logger::fail({__func__, "failed, line_headers.size = 0"});
             return -1;

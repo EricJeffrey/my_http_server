@@ -37,10 +37,9 @@ private:
                     logger::verbose({"read on sd: ", to_string(fd), " would block"});
                     return -2;
                 }
-                logger::fail({"in ", __func__, ": call to read failed"}, true);
+                logger::fail({"in ", __func__, ": call to recv failed"}, true);
                 return -1;
-            }
-            if (ret < sz_to_read) {
+            } else if (ret < sz_to_read) {
                 if (errno_tmp == EINTR) {
                     // interrupted
                     sz_to_read -= ret;
@@ -51,10 +50,9 @@ private:
                     len = pos_tmp + ret;
                     return len;
                 }
-            } else {
-                len = SIZE_BUFFER;
-                return len;
             }
+            len = SIZE_BUFFER;
+            return len;
         }
         return 0;
     }
@@ -68,7 +66,7 @@ public:
     ~buffered_reader() {}
 
     // save '\r\n' !! [line] will be cleared!
-    // return [length], -1 for error, -2 for timeout
+    // return [length], 0 for eof(closed socket), -1 for error, -2 for timeout
     int readLine(string &line) {
         line.clear();
         stringstream ss;
@@ -82,7 +80,6 @@ public:
                 logger::fail({"in ", __func__, ": call to fillbuffer return 0"});
                 return 0;
             } else if (ret == -2) {
-                logger::verbose({"fillBuffer would block"});
                 return -2;
             }
         }
@@ -102,10 +99,9 @@ public:
                     logger::fail({"in ", __func__, ": call to fillbuffer failed in loop"});
                     return -1;
                 } else if (ret == 0) {
-                    logger::fail({"in ", __func__, ": call to fillbuffer return 0, no crlf meet"});
+                    logger::verbose({"fillbuffer return 0"});
                     return 0;
                 } else if (ret == -2) {
-                    logger::verbose({"fillBuffer would block"});
                     return -2;
                 }
             }

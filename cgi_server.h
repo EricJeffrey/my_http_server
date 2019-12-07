@@ -55,7 +55,7 @@ int serveCgi(const string &path_prog, const vector<string> &list_paras, int sd) 
     }
     if (access(path_prog.c_str(), F_OK | R_OK) == -1) {
         logger::info({__func__, " call to access failed, file not found or cannot read"});
-        return -1;
+        return -2;
     }
     int fds_pipe[2];
     // create pipe
@@ -64,12 +64,10 @@ int serveCgi(const string &path_prog, const vector<string> &list_paras, int sd) 
         logger::fail({"in ", __func__, ": call to pipe failed"}, true);
         return -1;
     }
-    // handle SIGCHLD, must install sighandler to make sigsuspend run(otherwise it will hang)
     sigset_t mask, prev;
     sigemptyset(&mask);
     sigaddset(&mask, SIGCHLD);
     sigprocmask(SIG_BLOCK, &mask, &prev);
-    logger::verbose({"SIGCHLD blocked"});
     // start child
     pid_t pid_child = fork();
     if (pid_child == -1) {
@@ -107,7 +105,6 @@ int serveCgi(const string &path_prog, const vector<string> &list_paras, int sd) 
         const int exit_code_child = WEXITSTATUS(status_child);
         // terminated with 0
         if (exit_code_child == 0 || WIFSIGNALED(status_child)) {
-            logger::info({"cgi prog: ", path_prog, " data got"});
             // send response
             response_header header;
             response_header::strHeader(data, header);

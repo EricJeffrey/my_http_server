@@ -4,7 +4,7 @@
 
 void init() {
     { // config
-        config::address = "127.0.0.1";
+        config::address = "0.0.0.0";
         config::port = 8686;
         config::backlog = 1024;
         config::path_url_error = "static/error.html";
@@ -33,7 +33,7 @@ void init() {
             PAIR_IS(response_header::CODE_INTERNAL_SERVER_ERROR, "./500.html"),
         };
 
-        config::timeout_sec_conn = 3;
+        config::timeout_sec_conn = 10;
 
         config::env_query_string_key = "query";
     }

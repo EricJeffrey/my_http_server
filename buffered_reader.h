@@ -32,12 +32,11 @@ private:
             ret = read(fd, buffer + pos_tmp, sz_to_read);
             int errno_tmp = errno;
             if (ret == -1) {
-                // socket timeout
+                // socket would block
                 if (errno_tmp == EAGAIN || errno_tmp == EWOULDBLOCK) {
-                    logger::verbose({"read on sd: ", to_string(fd), " would block"});
                     return -2;
                 }
-                logger::fail({"in ", __func__, ": call to recv failed"}, true);
+                logger::fail({"in ", __func__, ": call to read failed"}, true);
                 return -1;
             } else if (ret < sz_to_read) {
                 if (errno_tmp == EINTR) {

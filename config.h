@@ -13,7 +13,6 @@ typedef pair<int, string> PAIR_IS;
 
 class config {
 public:
-    // todo listen on which address(localhost or 0.0.0.0)
     static string address;
     static int port;
     static int backlog;
@@ -31,6 +30,8 @@ public:
 
     static bool debug;
     static int log_level;
+
+    static string path_logger;
 
     config() {}
     ~config() {}
@@ -51,4 +52,7 @@ unordered_map<int, string> config::map_code2file_error;
 double config::timeout_sec_conn;
 
 string config::env_query_string_key;
+
+string config::path_logger;
+
 #endif // CONFIG_H

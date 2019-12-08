@@ -82,7 +82,8 @@ int serveCgi(const string &path_prog, const vector<string> &list_paras, int sd) 
             return -1;
         }
     } else if (pid_child > 0) {
-        // father
+        // father, add child to list
+        main_app::addChild(pid_child);
         // close read
         close(fds_pipe[1]);
         string data;
@@ -102,6 +103,8 @@ int serveCgi(const string &path_prog, const vector<string> &list_paras, int sd) 
             logger::fail({"in ", __func__, ": call to waitpid failed"}, true);
             return -1;
         }
+        // remove child
+        main_app::removeChild(pid_child);
         const int exit_code_child = WEXITSTATUS(status_child);
         // terminated with 0
         if (exit_code_child == 0 || WIFSIGNALED(status_child)) {

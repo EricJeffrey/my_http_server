@@ -3,6 +3,7 @@
 
 #include "config.h"
 #include "conn_hanlder.h"
+#include "main_app.h"
 #include "utils.h"
 
 class main_listener {
@@ -61,18 +62,7 @@ private:
         memset(&addr, 0, sizeof addr);
         addr.sin_family = AF_INET;
         addr.sin_port = htons(port);
-        if (address == "0.0.0.0")
-            addr.sin_addr.s_addr = INADDR_ANY;
-        // todo this will fail!(why)
-        // else if (address == "127.0.0.1" || address == "localhost")
-        //     addr.sin_addr.s_addr = INADDR_LOOPBACK;
-        else {
-            ret = inet_pton(AF_INET, address.c_str(), &addr.sin_addr);
-            if (ret < 0) {
-                logger::fail({"in ", __func__, ": call to inet_pton failed"}, true);
-                return -1;
-            }
-        }
+        addr.sin_addr.s_addr = inet_addr(config::address.c_str());
         ret = bind(listenfd, (sockaddr *)&addr, sizeof addr);
         if (ret < 0) {
             logger::fail({"in ", __func__, ": call to bind failed"}, true);
@@ -99,7 +89,7 @@ public:
         logger::info({"server started, listening on ", config::address, ":", to_string(config::port)});
 
         vector<thread> list_threads;
-        while (true) {
+        while (main_app::app_state == state::start) {
             sockaddr_in addr_tmp;
             socklen_t len_addr_tmp = sizeof(addr_tmp);
             int sd_conn = accept(sd_listen, (sockaddr *)&addr_tmp, &len_addr_tmp);

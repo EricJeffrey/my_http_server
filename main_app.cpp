@@ -20,9 +20,6 @@ void main_app::init() {
         config::address = "0.0.0.0";
         config::port = 8686;
         config::backlog = 1024;
-        config::path_url_error = "static/error.html";
-
-        config::path_file_error = "static/error.html";
 
         config::debug = true;
         config::log_level = logger::LOG_LV_INFO;
@@ -48,7 +45,7 @@ void main_app::init() {
 
         config::timeout_sec_conn = 10;
 
-        config::env_query_string_key = "query";
+        config::key_env_query_string = "query";
         config::path_logger = "cerr";
     }
     { // response phrase

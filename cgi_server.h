@@ -29,7 +29,7 @@ int startCgiProg(int fds_pipe[], const string &path_prog, const vector<string> &
         if (i != 0) query_string += '&';
         query_string += list_paras[i];
     }
-    setenv(config::env_query_string_key.c_str(), query_string.c_str(), 1);
+    setenv(config::key_env_query_string.c_str(), query_string.c_str(), 1);
     ret = dup2(fds_pipe[1], STDOUT_FILENO);
     if (ret == -1) {
         logger::fail({"in ", __func__, ": call to dup2 failed"}, true);

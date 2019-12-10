@@ -33,12 +33,12 @@ private:
         if (mp.find(status_code) == mp.end()) {
             // unsupported, just send code
             response_header header;
-            const string data = "error";
+            const string data = "error" + to_string(status_code);
             response_header::strHeader(data, header, status_code);
             string resp = header.toString() + data;
             ret = utils::writeStr2Fd(resp, sd);
             if (ret == -1) {
-                logger::fail({__func__, " call to utils.writeStr2Fd failed"});
+                logger::fail({"in ", __func__, ": call to utils.writeStr2Fd failed"});
                 return -1;
             }
         }
@@ -50,12 +50,12 @@ private:
         const string path_abs = mp.at(status_code);
         ret = createFileBundle(path_abs, str_header, sz_file, fd_file, status_code);
         if (ret == -1) {
-            logger::fail({__func__, " call to create file bundle failed!"});
+            logger::fail({"in ", __func__, ": call to create file bundle failed!"});
             return -1;
         }
         ret = writeFBundle2client(str_header, sz_file, fd_file, sd);
         if (ret == -1) {
-            logger::fail({__func__, " call to write file bundle to client failed!"});
+            logger::fail({"in ", __func__, ": call to write file bundle to client failed!"});
             return -1;
         }
         close(fd_file);
@@ -63,100 +63,93 @@ private:
         return 0;
     }
     // clear lines. do not read body
-    // return num of lines readed, -1 for error, -2 for timeout
+    // return num of lines readed, -1 for error, -2 for wouldblock, -3 for closed
     int readRequestHeader(request_header &header) {
-        logger::info({"reading request from socket: ", to_string(sd)});
 
         buffered_reader reader(sd);
         int ret = 0;
         // check header end
-        const string line_crlf = string({'\r', '\n'});
+        const string line_crlf = string("\r\n");
         vector<string> lines;
         while (true) {
             string line;
             ret = reader.readLine(line);
             if (ret == -1) {
-                logger::fail({__func__, " call to reader.readline on sd: ", to_string(sd), " failed"});
+                logger::fail({"in ", __func__, ": call to reader.readline on sd: ", to_string(sd), " failed"});
                 return -1;
             } else if (ret == -2) {
-                logger::verbose({"reader.readline Timeout"});
                 return -2;
             } else if (ret == 0) {
-                logger::fail({__func__, " call to reader.readline on sd: ", to_string(sd), " return 0"});
-                return -1;
+                logger::info({"in ", __func__, ": call to reader.readline on sd: ", to_string(sd), " return 0, closed"});
+                return -3;
             }
             if (line == line_crlf) break;
             if (ret > 0) lines.push_back(line);
         }
         ret = request_header::fromHeaderLines(lines, header);
         if (ret == -1) {
-            logger::fail({__func__, " call to fromHeaderLines failed with return -1"});
+            logger::fail({"in ", __func__, ": call to fromHeaderLines failed with return -1"});
             return -1;
         };
         return 0;
     }
     // run in new thread!
     int handleNewConn() {
-        logger::info({"handling new conn from: ", inet_ntoa(addr.sin_addr)});
+        logger::info({"handling new conn from sock: ", to_string(sd), " , addr: ", inet_ntoa(addr.sin_addr)});
         int ret = 0;
 
-        // set socket read timeout
-        struct timeval tv;
-        tv.tv_sec = (decltype(tv.tv_sec))(config::timeout_sec_sock);
-        tv.tv_usec = (decltype(tv.tv_usec))((config::timeout_sec_sock - tv.tv_sec) * 1000);
-        ret = setsockopt(sd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof tv);
+        // set to nonblock
+        ret = fcntl(sd, F_SETFL, O_NONBLOCK);
         if (ret == -1) {
-            logger::fail({__func__, " call to setsockopt failed"}, true);
+            logger::fail({"in ", __func__, ": call to fcntl, set socket nonblock failed"}, true);
+            close(sd);
             return -1;
         }
-
+        // timer
         clock_t clock_start = clock();
         while ((clock() - clock_start) / (double)CLOCKS_PER_SEC < config::timeout_sec_conn) {
             request_header header;
             ret = readRequestHeader(header);
             if (ret == -1) {
-                logger::fail({__func__, " call to readRequestHeader failed"});
+                logger::fail({"in ", __func__, ": call to readRequestHeader failed"});
                 serveError(response_header::CODE_INTERNAL_SERVER_ERROR);
                 return -1;
             } else if (ret == -2) {
-                // timeout
-                logger::info({__func__, " call to readRequestHeader failed, socket: ", to_string(sd), " Timeout"});
+                // would block, continue
+                continue;
+            } else if (ret == -3) {
+                logger::info({"connection to socket: ", to_string(sd), " closed"});
                 close(sd);
-                return -1;
+                return 0;
             }
             logger::debug({"request url: ", header.url});
             string path;
             vector<string> list_paras;
-            logger::verbose({"parse request url"});
             ret = utils::parseUrl(header.url, path, list_paras);
             if (ret == 1) {
                 // static
                 ret = serveStatic(path, sd);
                 if (ret == -1) {
-                    logger::fail({__func__, " call to serve static file failed"});
+                    logger::fail({"in ", __func__, ": call to serveStatic failed"});
                     serveError(response_header::CODE_INTERNAL_SERVER_ERROR);
-                } else if (ret == 1) {
+                } else if (ret == -2) {
                     serveError(response_header::CODE_NOT_FOUND);
                 }
             } else if (ret == 0) {
                 // cgi
                 ret = serveCgi(path, list_paras, sd);
                 if (ret == -1) {
-                    logger::fail({__func__, " call to serve cgi failed"});
+                    logger::fail({"in ", __func__, ": call to serveCgi failed"});
                     serveError(response_header::CODE_INTERNAL_SERVER_ERROR);
-                } else if (ret == 1) {
-                    logger::info({"no cgi prog found"});
+                } else if (ret == -2) {
                     serveError(response_header::CODE_NOT_FOUND);
                 }
             } else {
                 serveError(response_header::CODE_NOT_FOUND);
             }
         }
+        logger::verbose({"connection from socket: ", to_string(sd), " timeout, closing"});
         ret = close(sd);
-        if (ret < 0) {
-            logger::fail({__func__, " call to close failed"}, true);
-            return -1;
-        }
         return 0;
     }
 

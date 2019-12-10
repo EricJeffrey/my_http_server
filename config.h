@@ -13,32 +13,49 @@ typedef pair<int, string> PAIR_IS;
 
 class config {
 public:
+    static string address;
     static int port;
     static int backlog;
 
-    static string path_url_error;
-    static string path_file_error;
     static vector<PAIR_SS> list_url2path_static;
     static vector<PAIR_SS> list_url2file_cgi;
     static unordered_map<int, string> map_code2file_error;
 
-    static string env_query_string_key;
+    static string key_env_query_string;
 
     // timeout of connection
     static double timeout_sec_conn;
-    // timeout of read/recv/send/sendmsg on socket
-    static double timeout_sec_sock;
 
     static bool debug;
     static int log_level;
 
+    static string path_logger;
+
     config() {}
     ~config() {}
+
+    // todo load configuration from file
+    static void load() {}
 };
+
+string config::address;
 int config::port;
 int config::backlog;
-double config::timeout_sec_conn;
-double config::timeout_sec_sock;
+<<<<<<< HEAD
+=======
 
-string config::env_query_string_key;
+bool config::debug;
+int config::log_level;
+
+vector<PAIR_SS> config::list_url2path_static;
+vector<PAIR_SS> config::list_url2file_cgi;
+unordered_map<int, string> config::map_code2file_error;
+
+>>>>>>> simpsvr
+double config::timeout_sec_conn;
+
+string config::key_env_query_string;
+
+string config::path_logger;
+
 #endif // CONFIG_H

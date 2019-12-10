@@ -22,7 +22,7 @@ private:
         pos = len = 0;
     }
 
-    // clear buffer, return [length], -1 for error, -2 for [fd] timeout
+    // clear buffer, return [length], -1 for error, -2 for [fd] EAGAIN|EWOULDBLOCK
     int fillBuffer() {
         resetBuffer();
         int ret = 0;
@@ -32,16 +32,13 @@ private:
             ret = read(fd, buffer + pos_tmp, sz_to_read);
             int errno_tmp = errno;
             if (ret == -1) {
-                // socket timeout
+                // socket would block
                 if (errno_tmp == EAGAIN || errno_tmp == EWOULDBLOCK) {
-                    // todo reconsider about timeout
-                    logger::verbose({"read on sd: ", to_string(fd), " timeout"});
                     return -2;
                 }
-                logger::fail({__func__, " call to read failed"}, true);
+                logger::fail({"in ", __func__, ": call to read failed"}, true);
                 return -1;
-            }
-            if (ret < sz_to_read) {
+            } else if (ret < sz_to_read) {
                 if (errno_tmp == EINTR) {
                     // interrupted
                     sz_to_read -= ret;
@@ -52,10 +49,9 @@ private:
                     len = pos_tmp + ret;
                     return len;
                 }
-            } else {
-                len = SIZE_BUFFER;
-                return len;
             }
+            len = SIZE_BUFFER;
+            return len;
         }
         return 0;
     }
@@ -69,7 +65,7 @@ public:
     ~buffered_reader() {}
 
     // save '\r\n' !! [line] will be cleared!
-    // return [length], -1 for error, -2 for timeout
+    // return [length], 0 for eof(closed socket), -1 for error, -2 for timeout
     int readLine(string &line) {
         line.clear();
         stringstream ss;
@@ -77,13 +73,12 @@ public:
         if (len == 0) {
             ret = fillBuffer();
             if (ret == -1) {
-                logger::fail({__func__, " call to fillbuffer failed"});
+                logger::fail({"in ", __func__, ": call to fillbuffer failed"});
                 return -1;
             } else if (ret == 0) {
-                logger::fail({__func__, " call to fillbuffer return 0"});
+                logger::fail({"in ", __func__, ": call to fillbuffer return 0"});
                 return 0;
             } else if (ret == -2) {
-                logger::verbose({"call to fillbuffer return -2: timeout"});
                 return -2;
             }
         }
@@ -100,13 +95,12 @@ public:
                 ss << string(buffer + pos, buffer + len);
                 ret = fillBuffer();
                 if (ret == -1) {
-                    logger::fail({__func__, " call to fillbuffer failed in loop"});
+                    logger::fail({"in ", __func__, ": call to fillbuffer failed in loop"});
                     return -1;
                 } else if (ret == 0) {
-                    logger::fail({__func__, " call to fillbuffer return 0, no crlf meet"});
+                    logger::verbose({"fillbuffer return 0"});
                     return 0;
                 } else if (ret == -2) {
-                    logger::verbose({"call to fillbuffer return -2: timeout"});
                     return -2;
                 }
             }

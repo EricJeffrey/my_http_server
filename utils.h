@@ -3,7 +3,10 @@
 
 #include "config.h"
 #include <fcntl.h>
+#include <string>
 #include <sys/stat.h>
+
+using std::to_string;
 
 class utils {
 private:
@@ -89,7 +92,7 @@ public:
     };
 
     // 从 fd 读取数据直到 [read] 返回 0
-    // return number of bytes read, -1 for error
+    // return number of bytes read, -1 for error, -2 for EAGAIN|EWOULDBLOCK
     static int readAll(int fd, string &res) {
         res.clear();
         int ret = 0;
@@ -99,10 +102,15 @@ public:
         while (true) {
             // will block on pipe
             ret = read(fd, buffer, sz_buf);
+            int errno_tmp = errno;
             if (ret == -1) {
-                if (errno == EINTR)
+                if (errno_tmp == EINTR)
                     continue;
-                logger::fail({__func__, " call to read failed"}, true);
+                if (errno_tmp == EAGAIN || errno_tmp == EWOULDBLOCK) {
+                    logger::info({"read on sd: ", to_string(fd), " would block"});
+                    return -2;
+                }
+                logger::fail({"in ", __func__, ": call to read failed"}, true);
                 cerr << "read failed" << endl;
                 return -1;
             }
@@ -122,7 +130,7 @@ public:
             // all bytes written
             if (ret == sz) return 0;
             if (ret == -1) {
-                logger::fail({__func__, " failed with string(first 20 bytes): ", s.substr(0, std::max((int)s.size(), 20))}, true);
+                logger::fail({"in ", __func__, ": failed with string(first 20 bytes): ", s.substr(0, std::max((int)s.size(), 20))}, true);
                 return -1;
             }
             if (ret < sz) {
@@ -133,7 +141,7 @@ public:
                     sz -= ret;
                     continue;
                 }
-                logger::fail({__func__, " failed, bytes written less than size(ret < s.size())"}, true);
+                logger::fail({"in ", __func__, ": failed, bytes written less than size(ret < s.size())"}, true);
                 return -1;
             }
         }

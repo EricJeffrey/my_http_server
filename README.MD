@@ -49,30 +49,37 @@
       ```
 3. 命令行参数+配置文件
    1. 需求
-      1. 命令行参数(优先): `-p port(int) -a address(a.b.c.d) -d debug(true/false) -l loglevel(info/verbose) -o outputfile(string)`
-      2. 配置文件: 
-         ```conf
-            port=int
-            address=a.b.c.d
-            timeout_sec_conn=float
-            debug=true/false
-            log_level=info/verbose
-            path_logger=path
-            list_url2path_static=[
-               A B
-               ...
-            ]
-            list_url2file_cgi=[
-               A B
-               ...
-            ]
-            map_code2file_error={
-               404 B
-               500 C
-               ...
-            }
+      1. 命令行参数(优先): 
          ```
-   2. 实现方式
+         -a address(a.b.c.d)
+         -p port(int)
+         -d debug(true/false)
+         -l loglevel(info/verbose)
+         -o outputfile(string)
+         ```
+      1. 配置文件: 
+         ```conf
+         port=int
+         address=a.b.c.d
+         timeout_sec_conn=float
+         debug=true/false
+         log_level=info/verbose
+         path_logger=path
+         list_url2path_static=[
+            A B
+            ...
+         ]
+         list_url2file_cgi=[
+            A B
+            ...
+         ]
+         map_code2file_error={
+            404 B
+            500 C
+            ...
+         }
+         ```
+   1. 实现方式
       1. 命令行参数: `GNU getopt` + `c++ regex`
       2. 配置文件格式: 单行文本`A=B`，数组使用`A=[B,C]`，键值对使用`{A=B,C=D}`; 按照ASCII字符串撸代码解析
 

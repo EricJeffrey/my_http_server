@@ -30,12 +30,10 @@ public:
     static int log_level;
 
     static string path_logger;
+    static const string path_default_logger_cerr;
 
     config() {}
     ~config() {}
-
-    // todo load configuration from file
-    static void load() {}
 };
 
 string config::address;
@@ -54,5 +52,6 @@ double config::timeout_sec_conn;
 string config::key_env_query_string;
 
 string config::path_logger;
+const string config::path_default_logger_cerr = "cerr";
 
 #endif // CONFIG_H

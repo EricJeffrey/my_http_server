@@ -54,8 +54,6 @@ private:
         }
         mtx_logger.unlock();
         ofs_logger->flush();
-        if (!ofs_using_cerr)
-            dynamic_cast<ofstream *>(ofs_logger)->close();
     }
     // todo maybe too many lock/unlock, consider another way
     // commit log
@@ -68,6 +66,7 @@ private:
 public:
     static const int LOG_LV_VERBOSE;
     static const int LOG_LV_INFO;
+    static const vector<PAIR_IS> LIST_LOG_LV2STRING;
 
     logger() {}
     ~logger() {}
@@ -123,10 +122,11 @@ public:
     }
     // start logger thread
     static void start() {
-        if (config::path_logger == "cerr")
+        if (config::path_logger == config::path_default_logger_cerr) {
             ofs_logger = &cerr, ofs_using_cerr = true;
-        else
+        } else {
             ofs_logger = new ofstream(config::path_logger, std::ios_base::trunc);
+        }
         running_logger = true;
         thread_logger = thread([]() -> void {
             // sleep for 0.2 seconds
@@ -136,12 +136,18 @@ public:
                 nanosleep(&ts, &remain_ts);
                 flushQueue();
             }
+            if (!ofs_using_cerr)
+                dynamic_cast<ofstream *>(ofs_logger)->close();
         });
         thread_logger.detach();
     }
 };
 const int logger::LOG_LV_VERBOSE = 5;
 const int logger::LOG_LV_INFO = 4;
+const vector<PAIR_IS> logger::LIST_LOG_LV2STRING = {
+    PAIR_IS(LOG_LV_INFO, "info"),
+    PAIR_IS(LOG_LV_VERBOSE, "verbose"),
+};
 
 thread logger::thread_logger;
 mutex logger::mtx_logger;

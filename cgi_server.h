@@ -83,7 +83,7 @@ int serveCgi(const string &path_prog, const vector<string> &list_paras, int sd) 
         }
     } else if (pid_child > 0) {
         // father, add child to list
-        main_app::addChild(pid_child);
+        main_app::addChildProcess(pid_child);
         // close read
         close(fds_pipe[1]);
         string data;

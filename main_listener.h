@@ -86,7 +86,10 @@ public:
             logger::fail({"in ", __func__, ": call to openListenFd failed"});
             exit(EXIT_FAILURE);
         }
-        logger::info({"server started, listening on ", config::address, ":", to_string(config::port)});
+        logger::info({"server started, listening on ",
+                      config::address, ":", to_string(config::port),
+                      ", log path: ", config::path_logger,
+                      ", debug: ", (config::debug ? "true" : "false")});
 
         vector<thread> list_threads;
         while (main_app::app_state == state::start) {
@@ -100,6 +103,7 @@ public:
             logger::info({"connection from: ", inet_ntoa(addr_tmp.sin_addr), " established on socket: ", to_string(sd_conn)});
             list_threads.push_back(thread(&conn_handler::start, conn_handler(sd_conn, addr_tmp, len_addr_tmp)));
         }
+        
     }
 };
 

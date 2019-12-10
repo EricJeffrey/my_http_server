@@ -41,8 +41,6 @@ public:
 string config::address;
 int config::port;
 int config::backlog;
-<<<<<<< HEAD
-=======
 
 bool config::debug;
 int config::log_level;
@@ -51,7 +49,6 @@ vector<PAIR_SS> config::list_url2path_static;
 vector<PAIR_SS> config::list_url2file_cgi;
 unordered_map<int, string> config::map_code2file_error;
 
->>>>>>> simpsvr
 double config::timeout_sec_conn;
 
 string config::key_env_query_string;

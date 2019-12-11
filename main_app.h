@@ -23,6 +23,7 @@ private:
 
     // todo parse arguments and load config
     static int parseArgs();
+    static int loadConfig();
     static void init();
     static void start();
     static void stop();

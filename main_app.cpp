@@ -5,31 +5,19 @@
 #include "logger.h"
 #include "main_listener.h"
 #include <exception>
+#include <fstream>
+#include <istream>
 #include <regex>
 #include <signal.h>
 
+using std::getline;
+using std::ifstream;
+using std::ios_base;
 using std::regex;
 using std::regex_match;
 
 // -1 for error, -2 for help
 int main_app::parseArgs() {
-    auto check_port = [](string port) -> bool {
-        return regex_match(port, regex("[1-9]{1}[0-9]{3,4}"));
-    };
-    auto check_addr = [](string addr) -> bool {
-        return regex_match(addr, regex("(25[0-5]|2[0-4]\\d|[0-1]\\d{2}|[1-9]?\\d).(25[0-5]|2[0-4]\\d|[0-1]\\d{2}|[1-9]?\\d).(25[0-5]|2[0-4]\\d|[0-1]\\d{2}|[1-9]?\\d).(25[0-5]|2[0-4]\\d|[0-1]\\d{2}|[1-9]?\\d)"));
-    };
-    auto check_log_level = [](string log_level) -> bool {
-        for (auto &&p : logger::LIST_LOG_LV2STRING)
-            if (p.second == log_level) return true;
-        return false;
-    };
-    auto check_output_path = [](string path) -> bool {
-        if (path == config::path_default_logger_cerr || access(path.c_str(), F_OK | W_OK) != -1) return true;
-        if (creat(path.c_str(), S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP) == -1)
-            if (open(path.c_str(), O_RDWR | O_TRUNC) == -1) { return false; };
-        return true;
-    };
     bool debug_tmp = config::debug;
     string address_tmp = config::address;
     string port_tmp = to_string(config::port);
@@ -66,8 +54,10 @@ int main_app::parseArgs() {
             return -1;
         }
     }
-    bool ok = check_port(port_tmp) && check_addr(address_tmp) &&
-              check_log_level(log_level_tmp) && check_output_path(output_path_tmp);
+    bool ok = utils::check_port(port_tmp) &&
+              utils::check_addr(address_tmp) &&
+              utils::check_log_level(log_level_tmp) &&
+              utils::check_output_path(output_path_tmp);
     if (!ok) {
         cerr << "invalid argument" << endl;
         return -1;
@@ -81,6 +71,104 @@ int main_app::parseArgs() {
     return 0;
 }
 
+// todo test and fix bugs, /f not mapped
+int main_app::loadConfig() {
+    string address_tmp = config::address;
+    string port_tmp = to_string(config::port);
+    string timeout_tmp = to_string(config::timeout_sec_conn);
+    string path_logger_tmp = config::path_logger;
+
+    typedef pair<string, string> PAIR_SS;
+    int ret = 0;
+    ifstream ifs = ifstream(config::path_config, ios_base::in);
+    while (!ifs.eof()) {
+        string line;
+        getline(ifs, line);
+        utils::trim(line);
+        if (line.empty()) continue;
+        PAIR_SS res_pair_ss;
+        ret = utils::split(line, '=', res_pair_ss);
+        if (ret == -1) {
+            cerr << "error when parse config file, invalid config line" << endl;
+            goto err_load_config;
+        }
+        string &first = res_pair_ss.first;
+        string &second = res_pair_ss.second;
+        if (first == config::key_address) {
+            address_tmp = second;
+        } else if (first == config::key_port) {
+            port_tmp = second;
+        } else if (first == config::key_timeout_sec_conn) {
+            timeout_tmp = second;
+        } else if (first == config::key_timeout_sec_conn) {
+            timeout_tmp = second;
+        } else if (first == config::key_path_logger) {
+            path_logger_tmp = second;
+        } else if (second == "[" &&
+                   (first == config::key_list_url2path_static ||
+                    first == config::key_list_url2file_cgi ||
+                    first == config::key_map_code2file_error)) {
+            bool bracket_end_got = false;
+            // clear and use user's
+            if (first == config::key_list_url2path_static)
+                config::list_url2path_static.clear();
+            if (first == config::key_map_code2file_error)
+                config::map_code2file_error.clear();
+            while (!ifs.eof()) {
+                string line2;
+                getline(ifs, line2);
+                utils::trim(line2);
+                if (line2.empty()) continue;
+                if (line2 == "]") {
+                    bracket_end_got = true;
+                    break;
+                }
+                PAIR_SS res2_pair_ss;
+                ret = utils::split(line2, '=', res2_pair_ss);
+                if (ret == -1) {
+                    cerr << "error when parse config file, invalid path map line" << endl;
+                    goto err_load_config;
+                }
+                if (first == config::key_list_url2path_static) {
+                    config::list_url2path_static.push_back(res2_pair_ss);
+                } else if (first == config::key_list_url2file_cgi) {
+                    config::list_url2file_cgi.push_back(res2_pair_ss);
+                } else if (first == config::key_map_code2file_error) {
+                    if (utils::set_errorcode.find(res2_pair_ss.first) == utils::set_errorcode.end()) {
+                        cerr << "error when parse config file, invalid error code" << endl;
+                        goto err_load_config;
+                    }
+                    config::map_code2file_error[stoi(res2_pair_ss.first)] = res2_pair_ss.second;
+                }
+            }
+            if (bracket_end_got == false) {
+                cerr << "error when parse config file, end of array not found" << endl;
+                goto err_load_config;
+            }
+        } else {
+            cerr << "error when parse config file, unknown config line" << endl;
+            goto err_load_config;
+        }
+    }
+    bool ok;
+    ok = utils::check_addr(address_tmp) &&
+         utils::check_port(port_tmp) &&
+         utils::check_output_path(path_logger_tmp) &&
+         utils::check_timeout(timeout_tmp);
+    if (ok == false) {
+        cerr << "error when parse config file, invalid value format" << endl;
+        goto err_load_config;
+    }
+    config::address = address_tmp;
+    config::port = stoi(port_tmp);
+    config::timeout_sec_conn = stod(timeout_tmp);
+    config::path_logger = path_logger_tmp;
+    ifs.close();
+    return 0;
+err_load_config:
+    ifs.close();
+    return -1;
+}
 void main_app::init() {
     app_state = state::initialize;
     { // handle sigint
@@ -89,41 +177,26 @@ void main_app::init() {
         sa.sa_flags = 0;
         sa.sa_handler = [](int) -> void { stop(); };
         if (sigaction(SIGINT, &sa, nullptr) == -1) {
-            logger::fail({"in ", __func__, " call to sigaction failed"}, true);
-            return;
+            throw std::runtime_error("main_app.init: call to sigaction failed, exiting");
         }
     }
     { // config
+        typedef pair<int, string> PAIR_IS;
+        typedef pair<string, string> PAIR_SS;
+
         config::address = "127.0.0.1";
         config::port = 8686;
         config::backlog = 1024;
+        config::timeout_sec_conn = 10;
+        config::path_logger = config::path_default_logger_cerr;
+        config::list_url2path_static = {PAIR_SS("/", "./")};
+        config::map_code2file_error = {
+            PAIR_IS(response_header::CODE_NOT_FOUND, "./error.html"),
+            PAIR_IS(response_header::CODE_INTERNAL_SERVER_ERROR, "./error.html"),
+        };
 
         config::debug = true;
         config::log_level = logger::LOG_LV_INFO;
-
-        typedef pair<string, string> PAIR_SS;
-        config::list_url2path_static = {
-            PAIR_SS("/static/", "./static/"),
-            PAIR_SS("/", "./"),
-            PAIR_SS("/hello/", "./hello/"),
-            PAIR_SS("/file/", "./file/"),
-        };
-        config::list_url2file_cgi = {
-            PAIR_SS("/take", "./take.py"),
-            PAIR_SS("/cgi/tell", "./tell.py"),
-            PAIR_SS("/find", "./find.py"),
-        };
-
-        typedef pair<int, string> PAIR_IS;
-        config::map_code2file_error = {
-            PAIR_IS(response_header::CODE_NOT_FOUND, "./404.html"),
-            PAIR_IS(response_header::CODE_INTERNAL_SERVER_ERROR, "./500.html"),
-        };
-
-        config::timeout_sec_conn = 10;
-
-        config::key_env_query_string = "query";
-        config::path_logger = "cerr";
     }
     { // parse arguments
         int ret = parseArgs();
@@ -131,6 +204,14 @@ void main_app::init() {
             throw std::runtime_error("invalid arguments");
         } else if (ret == -2) {
             exit(EXIT_SUCCESS);
+        }
+    }
+    { // load config
+        if (access(config::path_config.c_str(), F_OK | R_OK) != -1) {
+            int ret = loadConfig();
+            if (ret == -1) {
+                throw std::runtime_error("load config failed");
+            }
         }
     }
     { // response phrase

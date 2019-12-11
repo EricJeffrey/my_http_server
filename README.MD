@@ -2,6 +2,11 @@
 
 **一服务一线程模型**，实现静态文件映射+动态CGI程序执行。
 
+## 构建及运行
+使用`g++`构建即可，具体命令为`g++ -Wall -o build/main.out main.cpp main_app.cpp -Wl,--whole-archive -lpthread -Wl,--no-whole-archive`。
+
+执行项目根目录的`go.sh`能够一键构建及(无参数)运行。也可以进入到`build`文件夹中运行生成的程序。
+
 ## 目标
 - 配置目录映射
 - 配置自定义错误页面
@@ -57,27 +62,25 @@
          -l loglevel(info/verbose)
          -o outputfile(string)
          ```
-      1. 配置文件: 
+      1. 配置文件(不考虑`debug, log_level`，只在命令行中指定): 
          ```conf
          port=int
          address=a.b.c.d
          timeout_sec_conn=float
-         debug=true/false
-         log_level=info/verbose
          path_logger=path
          list_url2path_static=[
-            A B
+            A=B
             ...
          ]
          list_url2file_cgi=[
-            A B
+            A=B
             ...
          ]
-         map_code2file_error={
-            404 B
-            500 C
+         map_code2file_error=[
+            404=B
+            500=C
             ...
-         }
+         ]
          ```
    1. 实现方式
       1. 命令行参数: `GNU getopt` + `c++ regex`
@@ -106,7 +109,8 @@
 - 程序生命周期管理 - 处理Ctrl+C(SIGINT)信号，结束子进程、线程并退出 **√**
 - 日志管理器，确保日志输出不冲突 **√**
   - 使用单独一个线程管理日志输出
-- 从文件读取配置信息，命令行参数
+- 命令行参数 **√**
+- 从文件读取配置信息
 - 解析请求头的首部
   - 使用客户端指定的timeout值
   - 传输编码encoding

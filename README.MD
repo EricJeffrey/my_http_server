@@ -2,6 +2,38 @@
 
 **一服务一线程模型**，实现静态文件映射+动态CGI程序执行。
 
+## 构建及运行
+使用`g++`构建即可，具体命令为`g++ -Wall -o build/main.out main.cpp main_app.cpp -Wl,--whole-archive -lpthread -Wl,--no-whole-archive`。
+
+执行项目根目录的`go.sh`能够一键构建及(无参数)运行。也可以进入到`build`文件夹中运行生成的程序。
+
+## 功能
+服务器提供了两种功能:
+1. 静态文件映射 - 自动响应指定目录下的文件
+2. 动态Python脚本 - 执行指定的Python脚本并将其输出(字符串)发送给客户端
+
+以无参数形式启动程序后，所在目录的文件会被自动映射(即可以通过浏览器访问)。`-h选项会展示所有可选的参数`，或者编辑`halox.conf`文件。程序启动后会自动创建(如果没有)`halox.conf`并从中读取配置信息。`halox.conf`的格式为:
+```conf
+address=0.0.0.0
+port=5656
+connection_timeout=10
+# default to stderr
+log_file=cerr
+# end with slash '/'
+static_directory_map=[
+    /static/=./static/
+]
+# not end with slash '/'
+cgi_file_map=[
+    /take=./take.py
+    /fd=./find.py
+    /tel=./tell.py
+]
+error_file_map=[
+    404=error.html
+]
+```
+
 ## 目标
 - 配置目录映射
 - 配置自定义错误页面
@@ -49,30 +81,35 @@
       ```
 3. 命令行参数+配置文件
    1. 需求
-      1. 命令行参数(优先): `-p port(int) -a address(a.b.c.d) -d debug(true/false) -l loglevel(info/verbose) -o outputfile(string)`
-      2. 配置文件: 
-         ```conf
-            port=int
-            address=a.b.c.d
-            timeout_sec_conn=float
-            debug=true/false
-            log_level=info/verbose
-            path_logger=path
-            list_url2path_static=[
-               A B
-               ...
-            ]
-            list_url2file_cgi=[
-               A B
-               ...
-            ]
-            map_code2file_error={
-               404 B
-               500 C
-               ...
-            }
+      1. 命令行参数(优先): 
          ```
-   2. 实现方式
+         -a address(a.b.c.d)
+         -p port(int)
+         -d debug(true/false)
+         -l loglevel(info/verbose)
+         -o outputfile(string)
+         ```
+      1. 配置文件(不考虑`debug, log_level`，只在命令行中指定): 
+         ```conf
+         port=int
+         address=a.b.c.d
+         timeout_sec_conn=float
+         path_logger=path
+         list_url2path_static=[
+            A=B
+            ...
+         ]
+         list_url2file_cgi=[
+            A=B
+            ...
+         ]
+         map_code2file_error=[
+            404=B
+            500=C
+            ...
+         ]
+         ```
+   1. 实现方式
       1. 命令行参数: `GNU getopt` + `c++ regex`
       2. 配置文件格式: 单行文本`A=B`，数组使用`A=[B,C]`，键值对使用`{A=B,C=D}`; 按照ASCII字符串撸代码解析
 
@@ -99,7 +136,8 @@
 - 程序生命周期管理 - 处理Ctrl+C(SIGINT)信号，结束子进程、线程并退出 **√**
 - 日志管理器，确保日志输出不冲突 **√**
   - 使用单独一个线程管理日志输出
-- 从文件读取配置信息，命令行参数
+- 命令行参数 **√**
+- 从文件读取配置信息 **√**
 - 解析请求头的首部
   - 使用客户端指定的timeout值
   - 传输编码encoding

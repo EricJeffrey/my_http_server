@@ -6,22 +6,33 @@
 #     g++ -Wall --static -o build/main.out main.cpp -lpthread
 #     # g++ -Wall -g -rdynamic -o build/main.out main.cpp -lpthread
 # fi
+
 build_dir=./build
+
 if [ -d "$build_dir" ]; then
     echo $build_dir exists
 else
     echo 'making dir $build_dir'
     mkdir build/
 fi
-echo 'building main.cpp'
-g++ -Wall -o build/main.out main.cpp main_app.cpp -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
-printf 'build complete, chdir to ./build, execute outputfile? (Y or N)'
-cd build/
-read a
-if [[ $a == 'y' || $a == 'Y' || $a == '' ]]
-then
-    echo '-----------------------------------'
+if [ "$1" = "r" ]; then
+    cd $build_dir
     ./main.out
+elif [ "$1" == "" ]; then
+    echo 'building main.cpp'
+    g++ -Wall -o build/main.out main.cpp main_app.cpp -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
+    printf 'build complete, chdir to ./build, execute outputfile? (Y or N)'
+    cd build/
+    read a
+    if [[ $a == 'y' || $a == 'Y' || $a == '' ]]
+    then
+        echo '-----------------------------------'
+        ./main.out
+    else
+        echo 'exiting, bye'
+    fi
 else
-    echo 'exiting, bye'
+    echo -e "Usage: ./go.sh [r], build and run target"
 fi
+
+

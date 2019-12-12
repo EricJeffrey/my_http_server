@@ -95,6 +95,7 @@ int serveCgi(const string &path_prog, const vector<string> &list_paras, int sd) 
             logger::fail({"in ", __func__, ": call to utils.readAll failed, would block!"});
             return -1;
         }
+        logger::debug({"cgi server, read child ", to_string(ret), " bytes"});
         int status_child;
         sigprocmask(SIG_SETMASK, &prev, nullptr);
         // start waitpid

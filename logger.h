@@ -99,9 +99,9 @@ public:
         stringstream ss;
         preInfo(ss);
         ss << "ERROR\t";
-        if (show_erron && errno_tmp != 0)
-            ss << "errno: " << errno_tmp << ", " << err_msg << ". ";
         msgInfo(ss, msg_list);
+        if (show_erron && errno_tmp != 0)
+            ss << ". errno: " << errno_tmp << ", " << err_msg << ".";
         commitLog(ss.str());
     }
     // to [stderr]

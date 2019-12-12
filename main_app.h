@@ -21,7 +21,7 @@ private:
     static const string usage;
     static set<pid_t> set_child_pids;
 
-    // todo parse arguments and load config
+    static int createConfigFile();
     static int parseArgs();
     static int loadConfig();
     static void init();

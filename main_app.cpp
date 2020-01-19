@@ -32,7 +32,7 @@ int main_app::createConfigFile() {
         ofs << '\t' << p.first << equ_sig << p.second << endl;
     }
     ofs << midbracket_sign_ed << endl;
-    ofs << "# end without slash '/'" << endl;
+    ofs << "# end without slash '/', cgi file should be in a different dir with any staticly mapped path" << endl;
     ofs << config::key_list_url2file_cgi << equ_sig << midbracket_sign_st << endl;
     for (auto &&p : config::list_url2file_cgi) {
         ofs << '\t' << p.first << equ_sig << p.second << endl;
@@ -243,11 +243,11 @@ void main_app::init() {
         config::path_logger = config::path_default_logger_cerr;
         config::list_url2path_static = {PAIR_SS("/", "./")};
         config::map_code2file_error = {
-            PAIR_IS(response_header::CODE_NOT_FOUND, "./error.html"),
-            PAIR_IS(response_header::CODE_INTERNAL_SERVER_ERROR, "./error.html"),
+            // PAIR_IS(response_header::CODE_NOT_FOUND, "./error.html"),
+            // PAIR_IS(response_header::CODE_INTERNAL_SERVER_ERROR, "./error.html"),
         };
 
-        config::debug = true;
+        config::debug = false;
         config::log_level = logger::LOG_LV_INFO;
     }
     { // load config

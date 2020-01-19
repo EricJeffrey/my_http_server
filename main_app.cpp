@@ -233,7 +233,6 @@ void main_app::init() {
         }
     }
     { // config
-        typedef pair<int, string> PAIR_IS;
         typedef pair<string, string> PAIR_SS;
 
         config::address = "127.0.0.1";

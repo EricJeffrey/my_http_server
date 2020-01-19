@@ -112,7 +112,7 @@ int serveCgi(const string &path_prog, const vector<string> &list_paras, int sd) 
             // send response
             response_header header;
             response_header::strHeader(data, header);
-            string resp = header.toString() + "\r\n" + data;
+            string resp = header.toString() + data;
             ret = utils::writeStr2Fd(resp, sd);
             if (ret == -1) {
                 logger::fail({"in ", __func__, ": call of writeStr2Fd failed"});

@@ -28,7 +28,7 @@ int createFileBundle(const string &path_abs, string &str_header, int &sz_file, i
         return -1;
     }
     response_header header;
-    response_header::htmlHeader(path_abs, header, status_code);
+    response_header::fileHeader(path_abs, header, status_code);
 
     fd_file = open(path_abs.c_str(), O_RDONLY);
     if (fd_file == -1) {

@@ -165,7 +165,7 @@ private:
         int ret = 0;
 
         // set to nonblock
-        ret = fcntl(sd, F_SETFL, O_NONBLOCK);
+        // ret = fcntl(sd, F_SETFL, O_NONBLOCK);
         if (ret == -1) {
             logger::fail({"in ", __func__, ": call to fcntl, set socket nonblock failed"}, true);
             close(sd);

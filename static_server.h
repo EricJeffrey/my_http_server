@@ -6,15 +6,54 @@
 #include "response_header.h"
 #include "utils.h"
 #include <sys/sendfile.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 
-// write [str_header] [fd_file] to client, using [write2client] and [sendfile]
+// write [n] bytes of [buffer] to [sd], return n or -1
+int writeBufferToSocket(int sd, void *buffer, size_t n, int flags = 0) {
+    int ret = 0;
+    ssize_t size_sent = 0;
+    while (size_sent < (ssize_t)n) {
+        ret = send(sd, (char *)buffer + (ssize_t)size_sent, n - size_sent, flags);
+        if (ret == -1) {
+            logger::fail({"in ", __func__, ": call to send failed"}, true);
+            return -1;
+        }
+        size_sent += ret;
+    }
+    return n;
+}
+
+// read from [in_fd] and [send] them on out_sd, return 0 or -1
+int writeFileToSocket(int in_fd, int out_sd, const int sz_file) {
+    int ret = 0;
+    const int buf_size = 8192;
+    char buffer[buf_size];
+    ssize_t size_sent = 0;
+    while (size_sent < sz_file) {
+        ret = read(in_fd, buffer, buf_size);
+        if (ret < 0) {
+            logger::fail({"in ", __func__, ": call to read failed"}, true);
+            return -1;
+        }
+        int flags = (size_sent + ret >= sz_file ? 0 : MSG_MORE);
+        ret = writeBufferToSocket(out_sd, buffer, ret, flags);
+        if (ret < 0) {
+            logger::fail({"in ", __func__, ": call to writeBufferToSocket failed"}, true);
+            return -1;
+        }
+        size_sent += ret;
+    }
+    return 0;
+}
+
+// write [str_header] [fd_file] to client
 // won't close [sd] [fd_file]
 int writeFBundle2client(const string &str_header, const int sz_file, const int fd_file, const int sd) {
     int ret = utils::writeStr2Fd(str_header, sd);
-    if (ret != -1)
-        ret = sendfile(sd, fd_file, NULL, sz_file);
+    if (ret >= 0) ret = writeFileToSocket(fd_file, sd, sz_file);
     if (ret == -1) {
-        logger::fail({"in ", __func__, ": call to  call to  write file fd: ", to_string(fd_file), " to client failed"}, true);
+        logger::fail({"in ", __func__, ": call to  write file fd: ", to_string(fd_file), " to client failed"}, true);
         return -1;
     }
     return 0;

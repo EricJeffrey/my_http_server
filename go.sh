@@ -20,14 +20,14 @@ if [ "$1" = "r" ]; then
     ./main.out
 elif [ "$1" == "" ]; then
     echo 'building main.cpp'
-    g++ -Wall -o build/main.out main.cpp main_app.cpp -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
+    g++ -Wall -o build/halox main.cpp main_app.cpp -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
     printf 'build complete, chdir to ./build, execute outputfile? (Y or N)'
     cd build/
     read a
     if [[ $a == 'y' || $a == 'Y' || $a == '' ]]
     then
         echo '-----------------------------------'
-        ./main.out
+        ./halox
     else
         echo 'exiting, bye'
     fi
